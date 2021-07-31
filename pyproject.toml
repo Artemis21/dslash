@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "dslash"
-version = "0.1.0"
+version = "0.1.1"
 description = "A library which supplements Discord.py by adding support for slash commands."
 authors = ["Artemis <artemis@artemisdev.xyz>"]
 license = "MIT"

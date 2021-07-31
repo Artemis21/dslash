@@ -1,6 +1,6 @@
 # DSlash
 
-![Version: 0.1.0](https://img.shields.io/badge/Version-0.1.0-red?style=flat-square)
+![Version: 0.1.1](https://img.shields.io/badge/Version-0.1.1-red?style=flat-square)
 [![Code Style: black](https://img.shields.io/badge/Code%20Style-black-black?style=flat-square)](https://github.com/psf/black)
 [![License: MIT](https://img.shields.io/badge/License-MIT-orange?style=flat-square)](./LICENSE)
 [![PyPI: dslash](https://img.shields.io/badge/PyPI-dslash-green?style=flat-square)](https://pypi.org/project/dslash)
@@ -131,7 +131,7 @@ or:
 Once you have Poetry installed:
 
 1. **Create a virtual environment:** `poetry shell`
-2. **Install dependencies:** `poetry install --dev`
+2. **Install dependencies:** `poetry install`
 
 The following commands are then available:
 

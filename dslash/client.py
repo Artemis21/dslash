@@ -73,13 +73,15 @@ class CommandClient(discord.Client):
         """
         # Log the error:
         original = error.original
-        message = traceback.format_exception(
-            type(original), original, original.__traceback__
+        message = "".join(
+            traceback.format_exception(type(original), original, original.__traceback__)
         )
         logger.error(f"An error occured while handling a command:\n{message}")
         # Send an error message:
         await interaction.response.send_message(
-            embed=discord.Embed(title="Command error!", description=str(error)),
+            embed=discord.Embed(
+                title="Command error!", description=str(error), color=0xFF0000
+            ),
             ephemeral=True,
         )
 
