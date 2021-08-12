@@ -62,11 +62,12 @@ def _update_permissions(
 class PermissionsSetter:
     """Decorator to set permissions on a command."""
 
-    def __call__(self, command: TopLevelCommand):
+    def __call__(self, command: TopLevelCommand) -> TopLevelCommand:
         """Set permissions on a command."""
         if not isinstance(command, TopLevelCommand):
             raise self._wrong_type(command)
         self._apply_permissions(command)
+        return command
 
     def _wrong_type(self, command: Any) -> TypeError:
         """Construct an error when the given command is of the wrong type."""
