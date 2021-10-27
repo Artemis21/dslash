@@ -1,13 +1,13 @@
 [tool.poetry]
 name = "dslash"
-version = "0.1.2"
-description = "A library which supplements Discord.py by adding support for slash commands."
-authors = ["Artemis <artemis@artemisdev.xyz>"]
+version = "0.2.0"
+description = "A library which supplements Nextcord by adding support for slash commands."
+authors = ["Artemis <me@arty.li>"]
 license = "MIT"
 readme = "README.md"
 homepage = "https://github.com/artemis21/dslash"
 repository = "https://github.com/artemis21/dslash"
-keywords = ["discord", "discord.py", "slash commands", "extension"]
+keywords = ["discord", "discord.py", "nextcord", "slash commands", "extension"]
 include = ["LICENSE"]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -20,11 +20,10 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = "^3.9"
-# PyPI doesn't allow direct dependencies.
-# "discord.py" = {git = "https://github.com/rapptz/discord.py.git"}
+nextcord = "^2.0.0-alpha.3"
 
 [tool.poetry.dev-dependencies]
-poethepoet = "^0.10.0"
+poethepoet = "^0.11.0b5"
 black = "^21.7b0"
 isort = "^5.9.3"
 flake8 = "^3.9.2"
@@ -37,16 +36,31 @@ flake8-mutable = "^1.2.0"
 flake8-raise = "^0.0.5"
 flake8-string-format = "^0.3.0"
 flake8-todo = "^0.7"
+build = "^0.7.0"
+setuptools = "^58.3.0"
+wheel = "^0.37.0"
+twine = "^3.4.2"
 
 [tool.isort]
 profile = "black"
-src_paths = ["dslash"]
+line_length = 100
+src_paths = ["euterpe"]
+
+[tool.black]
+line-length = 100
+target-version = ["py39"]
+
+[tool.poe]
+verbosity = -1
 
 [tool.poe.tasks]
 _format = "black . -q"
 _format_imports = "isort . -q"
 lint = "flake8 ."
 format = ["_format_imports", "_format", "lint"]
+_build = "python -m build"
+_publish = "twine upload dist/*"
+publish = ["_build", "_publish"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

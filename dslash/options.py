@@ -2,11 +2,11 @@
 import typing
 from typing import Any, Optional, Type, Union
 
-import discord
-from discord.enums import Enum
+import nextcord
+from nextcord.enums import Enum
 
-Channel = discord.abc.GuildChannel
-Mentionable = Union[discord.User, discord.Role]
+Channel = nextcord.abc.GuildChannel
+Mentionable = Union[nextcord.User, nextcord.Member, nextcord.Role]
 
 
 class ApplicationCommandOptionType(Enum):
@@ -43,9 +43,7 @@ class CommandOption:
         self.name = name
         self.type = type
         self.choices = (
-            [{"name": name, "value": value} for name, value in choices.items()]
-            if choices
-            else None
+            [{"name": name, "value": value} for name, value in choices.items()] if choices else None
         )
         if choices and not issubclass(type, (int, str)):
             raise TypeError("Only int or str options may have choices.")
@@ -64,6 +62,25 @@ class CommandOption:
         }
 
     @property
+    def _is_user_type(self) -> bool:
+        """Check if the option type is 'user'."""
+        return (
+            issubclass(self.type, (nextcord.User, nextcord.Member))
+            or self.type is nextcord.abc.User
+        )
+
+    @property
+    def _is_channel_type(self) -> bool:
+        """Check if the option type is 'channel'."""
+        return (
+            issubclass(
+                self.type,
+                (nextcord.TextChannel, nextcord.VoiceChannel, nextcord.CategoryChannel),
+            )
+            or self.type is nextcord.abc.GuildChannel
+        )
+
+    @property
     def type_value(self) -> ApplicationCommandOptionType:
         """Get the Discord API code for the option's type."""
         if (not self.type) or issubclass(self.type, str):
@@ -74,22 +91,20 @@ class CommandOption:
             return ApplicationCommandOptionType.integer
         if issubclass(self.type, float):
             return ApplicationCommandOptionType.number
-        if issubclass(self.type, (discord.User, discord.Member)):
+        if self._is_user_type:
             return ApplicationCommandOptionType.user
-        if issubclass(self.type, discord.abc.GuildChannel):
+        if self._is_channel_type:
             return ApplicationCommandOptionType.channel
-        if issubclass(self.type, discord.Role):
+        if issubclass(self.type, nextcord.Role):
             return ApplicationCommandOptionType.role
         if typing.get_origin(self.type) is typing.Union:
             if typing.get_args(self.type) == typing.get_args(Mentionable):
                 return ApplicationCommandOptionType.mentionable
-            raise TypeError(
-                "Union type not allowed for option type (except Mentionable)."
-            )
+            raise TypeError("Union type not allowed for option type (except Mentionable).")
         raise TypeError(f"Unsupported option type {self.type!r}.")
 
     async def __call__(
-        self, data: Optional[dict[str, Any]], guild: discord.Guild
+        self, data: Optional[dict[str, Any]], guild: Optional[nextcord.Guild]
     ) -> Any:
         """Process option data from the API."""
         if (not data) or "value" not in data:
@@ -104,7 +119,15 @@ class CommandOption:
         ):
             return value
         value = int(value)
-        if type == ApplicationCommandOptionType.user:
+        if not guild:
+            raise ValueError("User/role/channel option recieved without a guild.")
+        if type == ApplicationCommandOptionType.mentionable:
+            if role := guild.get_role(value):
+                return role
+        if type in (
+            ApplicationCommandOptionType.user,
+            ApplicationCommandOptionType.mentionable,
+        ):
             if not (user := guild.get_member(value)):
                 user = await guild.fetch_member(value)
             return user

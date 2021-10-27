@@ -6,9 +6,9 @@ import typing
 from collections import defaultdict
 from typing import Optional
 
-import discord
-import discord.http
-from discord.types.interactions import ApplicationCommand, EditApplicationCommand
+import nextcord
+import nextcord.http
+from nextcord.types.interactions import ApplicationCommand, EditApplicationCommand
 
 from .commands import (
     Permissions,
@@ -21,11 +21,11 @@ from .commands import (
 logger = logging.getLogger("dslash")
 
 
-class CommandClient(discord.Client):
+class CommandClient(nextcord.Client):
     """Client capable of registering and responding to slash commands.
 
     This supports all the same parameters, methods and attributes as a
-    `discord.Client`, plus a few more documented below.
+    `nextcord.Client`, plus a few more documented below.
     """
 
     application_id: int
@@ -46,25 +46,27 @@ class CommandClient(discord.Client):
         self.guild_id = guild_id
         self._commands = defaultdict(dict)
         self._commands_by_id: dict[int, TopLevelCommand] = {}
-        self._http: discord.http.HTTPClient = self._connection.http
+        self._http: nextcord.http.HTTPClient = self._connection.http
 
-    async def on_interaction(self, interaction: discord.Interaction):
+    async def on_interaction(self, interaction: nextcord.Interaction):
         """Handle a slash command interaction being sent.
 
         If you override this method, or regiser an `on_interaction` listener
         with `@client.event`, you must make sure to call this method, or
         slash commands will not work.
         """
-        if interaction.type == discord.InteractionType.application_command:
+        if interaction.type == nextcord.InteractionType.application_command:
             await self.wait_until_ready()
+            if (not interaction.data) or ("id" not in interaction.data):
+                return
+            command_id = int(interaction.data["id"])  # type: ignore
             try:
-                command_id = int(interaction.data["id"])
                 await self._commands_by_id[command_id](interaction)
             except SlashCommandInvokeError as exc:
                 self.dispatch("slash_command_error", interaction, exc)
 
     async def on_slash_command_error(
-        self, interaction: discord.Interaction, error: SlashCommandInvokeError
+        self, interaction: nextcord.Interaction, error: SlashCommandInvokeError
     ):
         """Handle an error while invoking a slash command.
 
@@ -79,9 +81,7 @@ class CommandClient(discord.Client):
         logger.error(f"An error occured while handling a command:\n{message}")
         # Send an error message:
         await interaction.response.send_message(
-            embed=discord.Embed(
-                title="Command error!", description=str(error), color=0xFF0000
-            ),
+            embed=nextcord.Embed(title="Command error!", description=str(error), color=0xFF0000),
             ephemeral=True,
         )
 
@@ -106,9 +106,11 @@ class CommandClient(discord.Client):
         """Update all commands for a scope and track permissions."""
         command_data = [command.dump() for command in commands.values()]
         try:
-            created_commands = await self._register_scope_commands(scope, command_data)
-        except discord.HTTPException as error:
-            self._handle_register_error(error, command_data)
+            created_commands = await self._register_scope_commands(
+                scope, command_data  # type: ignore
+            )
+        except nextcord.HTTPException as error:
+            self._handle_register_error(error, command_data)  # type: ignore
         permission_data = defaultdict(list)
         for command_data in created_commands:
             command = commands[command_data["name"]]
@@ -116,9 +118,7 @@ class CommandClient(discord.Client):
             self._commands_by_id[command_id] = command
             command.id = command_id
             for guild_id, permissions in command.permissions.items():
-                permission_data[guild_id].append(
-                    {"id": command.id, "permissions": permissions}
-                )
+                permission_data[guild_id].append({"id": command.id, "permissions": permissions})
         for guild_id, permissions in permission_data.items():
             if not permissions:
                 continue
@@ -144,7 +144,7 @@ class CommandClient(discord.Client):
         )
 
     def _handle_register_error(
-        self, error: discord.HTTPException, commands: list[EditApplicationCommand]
+        self, error: nextcord.HTTPException, commands: list[EditApplicationCommand]
     ):
         """Replace references to commands by index to references by name."""
         if error.status == 400:

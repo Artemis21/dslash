@@ -6,8 +6,8 @@ import inspect
 import typing
 from typing import Any, Optional, Type, Union
 
-import discord
-from discord.types.interactions import ApplicationCommandPermissions
+import nextcord
+from nextcord.types.interactions import ApplicationCommandPermissions
 
 from .options import ApplicationCommandOptionType, CommandOption, PartialCommandOption
 
@@ -27,8 +27,7 @@ class SlashCommandInvokeError(Exception):
         """Store a reference to the original exception."""
         self.original = original
         super().__init__(
-            f"Slash Command raised an exception: "
-            f"{original.__class__.__name__}: {original}"
+            f"Slash Command raised an exception: " f"{original.__class__.__name__}: {original}"
         )
 
 
@@ -38,7 +37,7 @@ class BaseSlashCommand:
     name: str
     description: str
 
-    def __init__(self, *, name: Optional[str], description: Optional[str]):
+    def __init__(self, *, name: str, description: str):
         """Set up a new slash command."""
         self.name = name
         self.description = description
@@ -55,16 +54,19 @@ class BaseSlashCommand:
 
     async def __call__(
         self,
-        interaction: discord.Interaction,
+        interaction: nextcord.Interaction,
         options: Optional[list[dict[str, Any]]] = None,
     ):
         """Handle the command or a nested subcommand of it being invoked."""
-        options = options or interaction.data.get("options", [])
-        option_map = {option["name"]: option for option in options}
-        await self._process_option_data(interaction, option_map)
+        if options:
+            full_options = options
+        else:
+            full_options = interaction.data.get("options", []) if interaction.data else []
+        option_map = {option["name"]: option for option in full_options}
+        await self._process_option_data(interaction, option_map)  # type: ignore
 
     async def _process_option_data(
-        self, interaction: discord.Interaction, options: dict[str, dict[str, Any]]
+        self, interaction: nextcord.Interaction, options: dict[str, dict[str, Any]]
     ):
         """Process and use option data passed when the command is invoked."""
         raise NotImplementedError
@@ -119,7 +121,7 @@ class CallableSlashCommand(BaseSlashCommand):
             data["options"].append(option.dump())
 
     async def _process_option_data(
-        self, interaction: discord.Interaction, options: dict[str, dict[str, Any]]
+        self, interaction: nextcord.Interaction, options: dict[str, dict[str, Any]]
     ):
         """Process and use option data passed when the command is invoked."""
         arguments = {}
@@ -157,7 +159,7 @@ class ContainerSlashCommand(BaseSlashCommand):
             data["options"].append(subcommand.dump())
 
     async def _process_option_data(
-        self, interaction: discord.Interaction, options: dict[str, dict[str, Any]]
+        self, interaction: nextcord.Interaction, options: dict[str, dict[str, Any]]
     ):
         """Process and use option data passed when the command is invoked.
 
@@ -326,10 +328,11 @@ CT = typing.TypeVar("CT", bound=CallableSlashCommand)
 class BaseSlashCommandConstructor(typing.Generic[CT]):
     """A class instances of which act as decorators to register commands."""
 
+    command_class: Type[CT]
+
     def __init__(self, *, name: Optional[str], description: Optional[str]):
         """Set up the slash command constructor."""
         self.overwrites: dict[str, Any] = {"name": name, "description": description}
-        self.command_class: Type[CT] = CallableSlashCommand
 
     def __call__(self, callback: CommandCallback) -> CT:
         """Construct an actual slash command."""
@@ -338,6 +341,8 @@ class BaseSlashCommandConstructor(typing.Generic[CT]):
 
 class SlashCommandConstructor(BaseSlashCommandConstructor[SlashCommand]):
     """A class for decorating top-level commands."""
+
+    command_class = SlashCommand
 
     def __init__(
         self,
@@ -354,14 +359,14 @@ class SlashCommandConstructor(BaseSlashCommandConstructor[SlashCommand]):
         self.overwrites["guild_id"] = guild_id
         self.overwrites["default_permission"] = default_permission
         self.overwrites["permissions"] = permissions
-        self.command_class = SlashCommand
 
 
 class SlashSubCommandConstructor(BaseSlashCommandConstructor[SlashSubCommand]):
     """A class for decorating subcommands."""
 
+    command_class = SlashSubCommand
+
     def __init__(self, *, parent: ContainerSlashCommand, **options: Any):
         """Set up the slash sub-command constructor."""
         super().__init__(**options)
         self.overwrites["parent"] = parent
-        self.command_class = SlashSubCommand

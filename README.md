@@ -1,23 +1,18 @@
 # DSlash
 
-![Version: 0.1.2](https://img.shields.io/badge/Version-0.1.2-red?style=flat-square)
+![Version: 0.2.0](https://img.shields.io/badge/Version-0.2.0-red?style=flat-square)
 [![Code Style: black](https://img.shields.io/badge/Code%20Style-black-black?style=flat-square)](https://github.com/psf/black)
 [![License: MIT](https://img.shields.io/badge/License-MIT-orange?style=flat-square)](./LICENSE)
 [![PyPI: dslash](https://img.shields.io/badge/PyPI-dslash-green?style=flat-square)](https://pypi.org/project/dslash)
 ![Python: ^3.9](https://img.shields.io/badge/python-%5E3.9-blue?style=flat-square)
 
-A library which supplements Discord.py by adding support for slash commands.
-
-Unlike other libraries, this uses Discord.py's new support for `Interaction`s,
-which means it works easily with Discord.py's `Button`s and `Select`s.
+A library which supplements [Nextcord](https://github.com/nextcord/nextcord)
+(a fork of Discord.py) by adding support for slash commands.
 
 Documentation is still a work in progress, and the library should currently be
-considered unstable. It will remain so at least until Discord.py v2 is released
-and stable.
+considered unstable.
 
-You can install it using pip, eg. `pip install dslash`. Currently, because
-Discord.py v2 has not been published to PyPI, you will have to install it
-separately: `pip install git+https://github.com/Rapptz/discord.py`.
+You can install it using pip, eg. `pip install dslash`.
 
 ## Example
 
@@ -26,7 +21,7 @@ import random
 import logging
 import traceback
 
-from discord import Embed, Interaction, Member, Role
+from nextcord import Embed, Interaction, Member, Role
 from dslash import CommandClient, SlashCommandInvokeError, allow_roles, option
 
 
@@ -110,9 +105,9 @@ client.run(TOKEN)
 
 ## Planned Features
 
-- Class-based command groups, like `discord.ext.commands` cogs.
+- Class-based command groups, like `nextcord.ext.commands` cogs.
 
-Compatibility with `discord.ext.commands` is not planned.
+Compatibility with `nextcord.ext.commands` is not planned.
 
 ## Development
 

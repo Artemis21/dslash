@@ -1,6 +1,4 @@
 """A library to supplement Discord.py by adding support for slash commands."""
-import discord
-
 from .client import CommandClient
 from .commands import SlashCommandInvokeError
 from .options import Channel, Mentionable, option
@@ -13,7 +11,7 @@ from .permissions import (
     guild_permissions,
 )
 
-__version__ = "0.1.2"
+__version__ = "0.2.0"
 __all__ = (
     "__version__",
     "CommandClient",
@@ -28,10 +26,3 @@ __all__ = (
     "global_permissions",
     "SlashCommandInvokeError",
 )
-
-if discord.version_info.major != 2:
-    raise RuntimeError(
-        "This library requires Discord.py v2. Currently, this cannot be installed "
-        "from PyPI, so you will have to install it from GitHub: \n"
-        "    pip install git+https://github.com/Rapptz/discord.py"
-    )

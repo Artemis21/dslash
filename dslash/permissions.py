@@ -1,7 +1,7 @@
 """Tools for setting permissions on commands."""
 from typing import Any, Optional
 
-from discord.enums import Enum
+from nextcord.enums import Enum
 
 from .commands import SlashCommandSubGroup, SlashSubCommand, TopLevelCommand
 
@@ -14,7 +14,7 @@ class ApplicationCommandPermissionType(Enum):
 
 
 UserPermissions = dict[int, bool]
-# More accurately, list[discord.types.interactions.ApplicationCommandPermissions],
+# More accurately, list[nextcord.types.interactions.ApplicationCommandPermissions],
 # but that just causes type checker errors.
 ApiPermissions = list[dict[str, int]]
 
@@ -48,9 +48,7 @@ def _dump_permissions(
     ]
 
 
-def _update_permissions(
-    dest: dict[int, ApiPermissions], source: dict[int, ApiPermissions]
-):
+def _update_permissions(dest: dict[int, ApiPermissions], source: dict[int, ApiPermissions]):
     """Update permissions for a command, extending rather than overwriting."""
     for guild_id, permissions in source.items():
         if guild_id in dest:
@@ -82,9 +80,7 @@ class PermissionsSetter:
             )
         else:
             attempt = repr(type(command))
-        return TypeError(
-            "Permissions can only be set on a top level command, not a " f"{attempt}"
-        )
+        return TypeError("Permissions can only be set on a top level command, not a " f"{attempt}")
 
     def _apply_permissions(self, command: TopLevelCommand):
         """Apply permissions to a command."""
@@ -94,9 +90,7 @@ class PermissionsSetter:
 class AllPermissionsSetter(PermissionsSetter):
     """Decorator to set permissions on a command for all guilds."""
 
-    def __init__(
-        self, roles: dict[int, UserPermissions], users: dict[int, UserPermissions]
-    ):
+    def __init__(self, roles: dict[int, UserPermissions], users: dict[int, UserPermissions]):
         """Store the permissions."""
         self.permissions = {}
         _update_permissions(
@@ -116,15 +110,13 @@ class AllPermissionsSetter(PermissionsSetter):
 
     def _apply_permissions(self, command: TopLevelCommand):
         """Set permissions on a command."""
-        _update_permissions(command.permissions, self.permissions)
+        _update_permissions(command.permissions, self.permissions)  # type: ignore
 
 
 class GuildPermissionsSetter(PermissionsSetter):
     """Decorator to set permissions on a command for one guild."""
 
-    def __init__(
-        self, roles: UserPermissions, users: UserPermissions, guild_id: Optional[int]
-    ):
+    def __init__(self, roles: UserPermissions, users: UserPermissions, guild_id: Optional[int]):
         """Store the permissions."""
         self.permissions = _dump_permissions(roles=roles, users=users)
         self.guild_id = guild_id
@@ -137,7 +129,7 @@ class GuildPermissionsSetter(PermissionsSetter):
                 f"Command {command.name!r} is not for a specific guild, so a "
                 "guild ID must be set for permissions."
             )
-        _update_permissions(command.permissions, {guild_id: self.permissions})
+        _update_permissions(command.permissions, {guild_id: self.permissions})  # type: ignore
 
 
 def global_permissions(
@@ -156,29 +148,21 @@ def guild_permissions(
     return GuildPermissionsSetter(roles or {}, users or {}, guild_id)
 
 
-def allow_roles(
-    *role_ids: int, guild_id: Optional[int] = None
-) -> GuildPermissionsSetter:
+def allow_roles(*role_ids: int, guild_id: Optional[int] = None) -> GuildPermissionsSetter:
     """Allow certain roles to use a command in a guild."""
     return guild_permissions(roles=_to_dict(role_ids, True), guild_id=guild_id)
 
 
-def disallow_roles(
-    *role_ids: int, guild_id: Optional[int] = None
-) -> GuildPermissionsSetter:
+def disallow_roles(*role_ids: int, guild_id: Optional[int] = None) -> GuildPermissionsSetter:
     """Prevents certain roles from using a command in a guild."""
     return guild_permissions(roles=_to_dict(role_ids, False), guild_id=guild_id)
 
 
-def allow_users(
-    *user_ids: int, guild_id: Optional[int] = None
-) -> GuildPermissionsSetter:
+def allow_users(*user_ids: int, guild_id: Optional[int] = None) -> GuildPermissionsSetter:
     """Allow certain users to use a command in a guild."""
     return guild_permissions(users=_to_dict(user_ids, True), guild_id=guild_id)
 
 
-def disallow_users(
-    *user_ids: int, guild_id: Optional[int] = None
-) -> GuildPermissionsSetter:
+def disallow_users(*user_ids: int, guild_id: Optional[int] = None) -> GuildPermissionsSetter:
     """Prevents certain users from using a command in a guild."""
     return guild_permissions(users=_to_dict(user_ids, False), guild_id=guild_id)
