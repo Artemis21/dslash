@@ -1,6 +1,6 @@
 # DSlash
 
-![Version: 0.3.0](https://img.shields.io/badge/Version-0.3.0-red?style=flat-square)
+![Version: 0.3.1](https://img.shields.io/badge/Version-0.3.1-red?style=flat-square)
 [![Code Style: black](https://img.shields.io/badge/Code%20Style-black-black?style=flat-square)](https://github.com/psf/black)
 [![License: MIT](https://img.shields.io/badge/License-MIT-orange?style=flat-square)](./LICENSE)
 [![PyPI: dslash](https://img.shields.io/badge/PyPI-dslash-green?style=flat-square)](https://pypi.org/project/dslash)
@@ -20,6 +20,7 @@ You can install it using pip, eg. `pip install dslash`.
 import random
 import logging
 import traceback
+import typing
 
 from nextcord import Embed, Interaction, Member, Role
 from dslash import Choices, CommandClient, SlashCommandInvokeError, allow_roles, option
@@ -41,7 +42,7 @@ async def on_ready():
 @client.command()
 async def roll(
         interaction: Interaction,
-        sides: int = option('How many sides (default 6).')):
+        sides: typing.Optional[int] = option('How many sides (default 6).')):
     """Roll a dice."""
     value = random.randint(1, sides or 6)
     await interaction.response.send_message(f'You got: {value}')
@@ -121,7 +122,6 @@ client.run(TOKEN)
 
 ## Planned Features
 
-- Using `Optional[...]` for optional arguments.
 - Using docstring conventions for option descriptions.
 - Removing the `option()` default-as-decorator.
 - Class-based command groups, like `nextcord.ext.commands` cogs.

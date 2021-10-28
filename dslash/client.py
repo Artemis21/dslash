@@ -216,8 +216,7 @@ class CommandClient(nextcord.Client):
         @allow_roles(ADMIN_ROLE_ID, guild_id=GUILD_ID)
         async def del_(
                 interaction: Interaction,
-                channel: Channel = option(
-                    'The channel to delete.', required=True)):
+                channel: Channel = option('The channel to delete.')):
             \"""Delete a channel.\"""
             await channel.delete()
             await interaction.response.send_message(

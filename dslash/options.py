@@ -150,44 +150,53 @@ class PartialCommandOption:
         description: str,
         name: Optional[str],
         type: Optional[Type],
-        required: bool,
     ):
         """Set up the command option."""
         self.description = description
         self.name = name
         self.type = type
-        self.required = required
+
+    def get_optional_type(self, param_type: Type) -> Optional[Type]:
+        """Return the root type if 'type' is optional."""
+        if typing.get_origin(param_type) is typing.Union:
+            args = typing.get_args(param_type)
+            if len(args) == 2 and isinstance(None, args[1]):
+                return args[0]
+        return None
+
+    def type_metadata(self, type: Type) -> tuple[Type, Optional[Type[Choices]], bool]:
+        """Get the root type, associated choices, and whether it is required."""
+        if root_type := self.get_optional_type(type):
+            type = root_type
+            required = False
+        else:
+            required = True
+        if issubclass(type, Choices):
+            _choices, choice_type = type._get_choices()
+            choices = type
+            type = choice_type
+        else:
+            choices = None
+        return type, choices, required
 
     def fallbacks(self, *, name: str, type: Optional[Type]) -> CommandOption:
         """Create an option with all attributes set."""
-        final_type = self.type or type or str
-        if issubclass(final_type, Choices):
-            _choices, choice_type = final_type._get_choices()
-            choices = final_type
-            final_type = choice_type
-        else:
-            choices = None
+        final_type, choices, required = self.type_metadata(self.type or type or str)
         return CommandOption(
             description=self.description,
             name=self.name or name,
             argument_name=name,
             type=final_type,
             choices=choices,
-            required=self.required,
+            required=required,
         )
 
 
 def option(
     description: str,
-    required: bool = False,
     *,
     name: Optional[str] = None,
     type: Optional[Type] = None,
 ) -> PartialCommandOption:
     """Label an option of a slash command."""
-    return PartialCommandOption(
-        description=description,
-        name=name,
-        type=type,
-        required=required,
-    )
+    return PartialCommandOption(description=description, name=name, type=type)
