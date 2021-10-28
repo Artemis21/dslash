@@ -5,6 +5,8 @@ from typing import Any, Optional, Type, Union
 import nextcord
 from nextcord.enums import Enum
 
+from .choices import Choices
+
 Channel = nextcord.abc.GuildChannel
 Mentionable = Union[nextcord.User, nextcord.Member, nextcord.Role]
 
@@ -34,7 +36,7 @@ class CommandOption:
         name: str,
         argument_name: str,
         type: Type,
-        choices: Optional[dict[str, Union[str, int]]],
+        choices: Optional[Type[Choices]],
         required: bool,
     ):
         """Set up the command option."""
@@ -42,23 +44,25 @@ class CommandOption:
         self.argument_name = argument_name
         self.name = name
         self.type = type
-        self.choices = (
-            [{"name": name, "value": value} for name, value in choices.items()] if choices else None
-        )
-        if choices and not issubclass(type, (int, str)):
-            raise TypeError("Only int or str options may have choices.")
-        if choices and not all(isinstance(value, type) for value in choices.values()):
-            raise TypeError("All choice values must be of the option type.")
+        self.choices = choices
         self.required = required
 
     def dump(self) -> dict[str, Any]:
         """Get the JSON data for registering this option with the API."""
+        if self.choices:
+            choice_data, _choice_type = self.choices._get_choices()
+            choice_dump = [
+                {"name": choice.name, "value": choice.value}
+                for choice in choice_data
+            ]
+        else:
+            choice_dump = None
         return {
             "name": self.name,
             "description": self.description,
             "required": self.required,
             "type": self.type_value.value,
-            "choices": self.choices,
+            "choices": choice_dump,
         }
 
     @property
@@ -146,24 +150,29 @@ class PartialCommandOption:
         description: str,
         name: Optional[str],
         type: Optional[Type],
-        choices: Optional[dict[str, Union[str, int]]],
         required: bool,
     ):
         """Set up the command option."""
         self.description = description
         self.name = name
         self.type = type
-        self.choices = choices
         self.required = required
 
     def fallbacks(self, *, name: str, type: Optional[Type]) -> CommandOption:
         """Create an option with all attributes set."""
+        final_type = self.type or type or str
+        if issubclass(final_type, Choices):
+            _choices, choice_type = final_type._get_choices()
+            choices = final_type
+            final_type = choice_type
+        else:
+            choices = None
         return CommandOption(
             description=self.description,
             name=self.name or name,
             argument_name=name,
-            type=self.type or type or str,
-            choices=self.choices,
+            type=final_type,
+            choices=choices,
             required=self.required,
         )
 
@@ -171,7 +180,6 @@ class PartialCommandOption:
 def option(
     description: str,
     required: bool = False,
-    choices: Optional[dict[str, Union[str, int]]] = None,
     *,
     name: Optional[str] = None,
     type: Optional[Type] = None,
@@ -181,6 +189,5 @@ def option(
         description=description,
         name=name,
         type=type,
-        choices=choices,
         required=required,
     )

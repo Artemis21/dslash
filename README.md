@@ -1,6 +1,6 @@
 # DSlash
 
-![Version: 0.2.0](https://img.shields.io/badge/Version-0.2.0-red?style=flat-square)
+![Version: 0.3.0](https://img.shields.io/badge/Version-0.3.0-red?style=flat-square)
 [![Code Style: black](https://img.shields.io/badge/Code%20Style-black-black?style=flat-square)](https://github.com/psf/black)
 [![License: MIT](https://img.shields.io/badge/License-MIT-orange?style=flat-square)](./LICENSE)
 [![PyPI: dslash](https://img.shields.io/badge/PyPI-dslash-green?style=flat-square)](https://pypi.org/project/dslash)
@@ -22,7 +22,7 @@ import logging
 import traceback
 
 from nextcord import Embed, Interaction, Member, Role
-from dslash import CommandClient, SlashCommandInvokeError, allow_roles, option
+from dslash import Choices, CommandClient, SlashCommandInvokeError, allow_roles, option
 
 
 GUILD_ID = ...
@@ -100,11 +100,30 @@ async def ban(
     await interaction.response.send_message('Banned the user.', ephemeral=True)
 
 
+class RPSChoices(Choices):
+    rock = 'Rock'
+    paper = 'Paper'
+    scissors = 'Scissors'
+    gun = 'Gun'
+
+
+@client.command()
+async def rps(interaction: Interaction, choice: RPSChoices = option('Your choice.')):
+    """Play rock, paper, scissors."""
+    if choice == RPSChoices.gun:
+        await interaction.response.send_message("That's cheating!")
+    else:
+        await interaction.response.send_message(f'You picked {choice.name}.')
+
+
 client.run(TOKEN)
 ```
 
 ## Planned Features
 
+- Using `Optional[...]` for optional arguments.
+- Using docstring conventions for option descriptions.
+- Removing the `option()` default-as-decorator.
 - Class-based command groups, like `nextcord.ext.commands` cogs.
 
 Compatibility with `nextcord.ext.commands` is not planned.
