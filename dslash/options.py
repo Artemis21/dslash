@@ -29,23 +29,34 @@ class ApplicationCommandOptionType(Enum):
 class CommandOption:
     """An argument to a slash command."""
 
-    def __init__(
-        self,
-        *,
-        description: str,
-        name: str,
-        argument_name: str,
-        type: Type,
-        choices: Optional[Type[Choices]],
-        required: bool,
-    ):
+    def __init__(self, *, name: str, description: str, type: Type):
         """Set up the command option."""
         self.description = description
-        self.argument_name = argument_name
         self.name = name
-        self.type = type
-        self.choices = choices
-        self.required = required
+        self.type, self.choices, self.required = self._get_type_metadata(type)
+
+    def _get_optional_type(self, param_type: Type) -> Optional[Type]:
+        """Return the root type if 'type' is optional."""
+        if typing.get_origin(param_type) is typing.Union:
+            args = typing.get_args(param_type)
+            if len(args) == 2 and isinstance(None, args[1]):
+                return args[0]
+        return None
+
+    def _get_type_metadata(self, type: Type) -> tuple[Type, Optional[Type[Choices]], bool]:
+        """Get the root type, associated choices, and whether it is required."""
+        if root_type := self._get_optional_type(type):
+            type = root_type
+            required = False
+        else:
+            required = True
+        if issubclass(type, Choices):
+            _choices, choice_type = type._get_choices()
+            choices = type
+            type = choice_type
+        else:
+            choices = None
+        return type, choices, required
 
     def dump(self) -> dict[str, Any]:
         """Get the JSON data for registering this option with the API."""
@@ -139,64 +150,3 @@ class CommandOption:
             return guild.get_role(value)
         if type == ApplicationCommandOptionType.channel:
             return guild.get_channel(value)
-
-
-class PartialCommandOption:
-    """An argument to a slash command with some optional attributes."""
-
-    def __init__(
-        self,
-        *,
-        description: str,
-        name: Optional[str],
-        type: Optional[Type],
-    ):
-        """Set up the command option."""
-        self.description = description
-        self.name = name
-        self.type = type
-
-    def get_optional_type(self, param_type: Type) -> Optional[Type]:
-        """Return the root type if 'type' is optional."""
-        if typing.get_origin(param_type) is typing.Union:
-            args = typing.get_args(param_type)
-            if len(args) == 2 and isinstance(None, args[1]):
-                return args[0]
-        return None
-
-    def type_metadata(self, type: Type) -> tuple[Type, Optional[Type[Choices]], bool]:
-        """Get the root type, associated choices, and whether it is required."""
-        if root_type := self.get_optional_type(type):
-            type = root_type
-            required = False
-        else:
-            required = True
-        if issubclass(type, Choices):
-            _choices, choice_type = type._get_choices()
-            choices = type
-            type = choice_type
-        else:
-            choices = None
-        return type, choices, required
-
-    def fallbacks(self, *, name: str, type: Optional[Type]) -> CommandOption:
-        """Create an option with all attributes set."""
-        final_type, choices, required = self.type_metadata(self.type or type or str)
-        return CommandOption(
-            description=self.description,
-            name=self.name or name,
-            argument_name=name,
-            type=final_type,
-            choices=choices,
-            required=required,
-        )
-
-
-def option(
-    description: str,
-    *,
-    name: Optional[str] = None,
-    type: Optional[Type] = None,
-) -> PartialCommandOption:
-    """Label an option of a slash command."""
-    return PartialCommandOption(description=description, name=name, type=type)

@@ -1,6 +1,6 @@
 # DSlash
 
-![Version: 0.3.1](https://img.shields.io/badge/Version-0.3.1-red?style=flat-square)
+![Version: 0.3.2](https://img.shields.io/badge/Version-0.3.2-red?style=flat-square)
 [![Code Style: black](https://img.shields.io/badge/Code%20Style-black-black?style=flat-square)](https://github.com/psf/black)
 [![License: MIT](https://img.shields.io/badge/License-MIT-orange?style=flat-square)](./LICENSE)
 [![PyPI: dslash](https://img.shields.io/badge/PyPI-dslash-green?style=flat-square)](https://pypi.org/project/dslash)
@@ -40,10 +40,11 @@ async def on_ready():
 
 
 @client.command()
-async def roll(
-        interaction: Interaction,
-        sides: typing.Optional[int] = option('How many sides (default 6).')):
-    """Roll a dice."""
+async def roll(interaction: Interaction, sides: typing.Optional[int]):
+    """Roll a dice.
+
+    :param sides: How many sides (default 6).
+    """
     value = random.randint(1, sides or 6)
     await interaction.response.send_message(f'You got: {value}')
 
@@ -85,18 +86,22 @@ roles = admin.subgroup('roles', 'Commands to manage roles.')
 
 
 @roles.subcommand(name='del')
-async def del_(
-        interaction: Interaction, role: Role = option('The role to delete.')):
-    """Delete a role."""
+async def del_(interaction: Interaction, role: Role):
+    """Delete a role.
+
+    :param role: The role to delete.
+    """
     await role.delete()
     await interaction.response.send_message('Deleted the role.', ephemeral=True)
 
 
 @allow_roles(ADMIN_ROLE_ID)
 @client.command(default_permission=False)
-async def ban(
-        interaction: Interaction, user: Member = option('The user to ban.')):
-    """Ban a user."""
+async def ban(interaction: Interaction, user: Member):
+    """Ban a user.
+
+    :param user: The user to ban.
+    """
     await user.ban()
     await interaction.response.send_message('Banned the user.', ephemeral=True)
 
@@ -109,8 +114,11 @@ class RPSChoices(Choices):
 
 
 @client.command()
-async def rps(interaction: Interaction, choice: RPSChoices = option('Your choice.')):
-    """Play rock, paper, scissors."""
+async def rps(interaction: Interaction, choice: RPSChoices):
+    """Play rock, paper, scissors.
+
+    :param choice: Your choice.
+    """
     if choice == RPSChoices.gun:
         await interaction.response.send_message("That's cheating!")
     else:
@@ -122,8 +130,6 @@ client.run(TOKEN)
 
 ## Planned Features
 
-- Using docstring conventions for option descriptions.
-- Removing the `option()` default-as-decorator.
 - Class-based command groups, like `nextcord.ext.commands` cogs.
 
 Compatibility with `nextcord.ext.commands` is not planned.

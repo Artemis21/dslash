@@ -6,10 +6,12 @@ import inspect
 import typing
 from typing import Any, Optional, Type, Union
 
+import docstring_parser
+from docstring_parser.common import DocstringParam
 import nextcord
 from nextcord.types.interactions import ApplicationCommandPermissions
 
-from .options import ApplicationCommandOptionType, CommandOption, PartialCommandOption
+from .options import ApplicationCommandOptionType, CommandOption
 
 if typing.TYPE_CHECKING:
     from .client import CommandClient
@@ -84,13 +86,17 @@ class CallableSlashCommand(BaseSlashCommand):
     def _process_callback(self):
         """Process the name, docstring and arguments of the callback."""
         self.name = self.name or self.callback.__name__
+        docstring = docstring_parser.parse(self.callback.__doc__ or "")
         if not self.description:
-            docstring = inspect.getdoc(self.callback) or "No description."
-            self.description = docstring.splitlines()[0]
-        self._process_options()
+            self.description = docstring.short_description or "No description."
+        self._process_options(docstring.params)
 
-    def _process_options(self):
+    def _process_options(self, descriptions: list[DocstringParam]):
         """Get the options for this command from callback annotations."""
+        description_map = {
+            docstring_param.arg_name: docstring_param.description
+            for docstring_param in descriptions
+        }
         signature = inspect.signature(self.callback)
         # get_type_hints will parse string type hints, which inspect won't.
         annotations = typing.get_type_hints(self.callback)
@@ -102,17 +108,20 @@ class CallableSlashCommand(BaseSlashCommand):
             if n == 0 or (done_self and n == 1):
                 # It's the first parameter, the interaction.
                 continue
-            self._process_option(parameter, annotations[parameter.name])
+            description = description_map.get(parameter.name)
+            self._process_option(parameter, annotations[parameter.name], description)
 
-    def _process_option(self, parameter: inspect.Parameter, annotation: Type):
+    def _process_option(
+            self,
+            parameter: inspect.Parameter,
+            annotation: Type,
+            description: Optional[str]):
         """Process an option annotation."""
-        if not isinstance(parameter.default, PartialCommandOption):
-            raise TypeError(
-                "Command options must be annotated with an option declaration "
-                "as the parameter default."
-            )
-        option = parameter.default.fallbacks(name=parameter.name, type=annotation)
-        self.options[option.name] = option
+        self.options[parameter.name] = CommandOption(
+            name=parameter.name,
+            description=description or "No description.",
+            type=annotation
+        )
 
     def _add_dump_data(self, data: dict[str, Any]):
         """Add the command options to the dump data."""
@@ -127,7 +136,7 @@ class CallableSlashCommand(BaseSlashCommand):
         arguments = {}
         for option in self.options.values():
             data = options.get(option.name)
-            arguments[option.argument_name] = await option(data, interaction.guild)
+            arguments[option.name] = await option(data, interaction.guild)
         try:
             await self.callback(interaction, **arguments)
         except Exception as exc:

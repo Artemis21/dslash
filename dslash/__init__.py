@@ -2,7 +2,7 @@
 from .choices import Choice, Choices
 from .client import CommandClient
 from .commands import SlashCommandInvokeError
-from .options import Channel, Mentionable, option
+from .options import Channel, Mentionable
 from .permissions import (
     allow_roles,
     allow_users,
@@ -12,11 +12,10 @@ from .permissions import (
     guild_permissions,
 )
 
-__version__ = "0.3.1"
+__version__ = "0.3.2"
 __all__ = (
     "__version__",
     "CommandClient",
-    "option",
     "Channel",
     "Mentionable",
     "Choices",
