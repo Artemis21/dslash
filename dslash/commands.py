@@ -7,8 +7,8 @@ import typing
 from typing import Any, Optional, Type, Union
 
 import docstring_parser
-from docstring_parser.common import DocstringParam
 import nextcord
+from docstring_parser.common import DocstringParam
 from nextcord.types.interactions import ApplicationCommandPermissions
 
 from .options import ApplicationCommandOptionType, CommandOption
@@ -112,15 +112,11 @@ class CallableSlashCommand(BaseSlashCommand):
             self._process_option(parameter, annotations[parameter.name], description)
 
     def _process_option(
-            self,
-            parameter: inspect.Parameter,
-            annotation: Type,
-            description: Optional[str]):
+        self, parameter: inspect.Parameter, annotation: Type, description: Optional[str]
+    ):
         """Process an option annotation."""
         self.options[parameter.name] = CommandOption(
-            name=parameter.name,
-            description=description or "No description.",
-            type=annotation
+            name=parameter.name, description=description or "No description.", type=annotation
         )
 
     def _add_dump_data(self, data: dict[str, Any]):

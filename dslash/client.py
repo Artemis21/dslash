@@ -4,7 +4,7 @@ import re
 import traceback
 import typing
 from collections import defaultdict
-from typing import Optional
+from typing import Any, Callable, Coroutine, Optional, Union, overload
 
 import nextcord
 import nextcord.http
@@ -19,6 +19,8 @@ from .commands import (
 )
 
 logger = logging.getLogger("dslash")
+AsyncFunc = Callable[..., Coroutine]
+AsyncWrapper = Callable[[AsyncFunc], AsyncFunc]
 
 
 class CommandClient(nextcord.Client):
@@ -47,6 +49,64 @@ class CommandClient(nextcord.Client):
         self._commands = defaultdict(dict)
         self._commands_by_id: dict[int, TopLevelCommand] = {}
         self._http: nextcord.http.HTTPClient = self._connection.http
+        self._event_handlers: dict[str, list[AsyncFunc]] = defaultdict(list)
+
+    def dispatch(self, event_name: str, *args: Any, **kwargs: Any) -> None:
+        """Dispatch an event and call additional handlers."""
+        super().dispatch(event_name, *args, **kwargs)
+        for handler in self._event_handlers[event_name]:
+            self._schedule_event(handler, event_name, *args, **kwargs)
+
+    @overload
+    def listener(self, value: AsyncFunc) -> AsyncFunc:
+        """Register an event listener for the event with the function's name.
+
+        The function should be named "on_" followed by the event name, for example:
+
+        ```python
+        @client.listener
+        async def on_message(message):
+            ...
+        ```
+
+        This would register a handler for the "message" event.
+        """
+        ...
+
+    @overload
+    def listener(self, value: str) -> AsyncWrapper:
+        """Register an event listener with the given name.
+
+        For example:
+
+        ```python
+        @client.listener("message")
+        async def my_message_handler(message):
+            ...
+        ```
+        """
+        ...
+
+    def listener(self, value: Union[str, AsyncFunc]) -> Union[AsyncFunc, AsyncWrapper]:
+        """Register an event listener."""
+        if isinstance(value, str):
+
+            def wrapper(handler: AsyncFunc) -> AsyncFunc:
+                self.add_listener(value, handler)
+                return handler
+
+            return wrapper
+        elif callable(value):
+            self.add_listener(value.__name__.removeprefix("on_"), value)
+            return value
+        else:
+            raise TypeError(
+                "CommandClient.listener should be passed an event name or event handler."
+            )
+
+    def add_listener(self, event_name: str, handler: AsyncFunc):
+        """Register a function as an event listener."""
+        self._event_handlers[event_name].append(handler)
 
     async def on_interaction(self, interaction: nextcord.Interaction):
         """Handle a slash command interaction being sent.

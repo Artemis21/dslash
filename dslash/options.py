@@ -37,7 +37,7 @@ class CommandOption:
 
     def _get_optional_type(self, param_type: Type) -> Optional[Type]:
         """Return the root type if 'type' is optional."""
-        if typing.get_origin(param_type) is typing.Union:
+        if typing.get_origin(param_type) is typing.Union:  # type: ignore
             args = typing.get_args(param_type)
             if len(args) == 2 and isinstance(None, args[1]):
                 return args[0]
@@ -62,10 +62,7 @@ class CommandOption:
         """Get the JSON data for registering this option with the API."""
         if self.choices:
             choice_data, _choice_type = self.choices._get_choices()
-            choice_dump = [
-                {"name": choice.name, "value": choice.value}
-                for choice in choice_data
-            ]
+            choice_dump = [{"name": choice.name, "value": choice.value} for choice in choice_data]
         else:
             choice_dump = None
         return {
@@ -112,7 +109,7 @@ class CommandOption:
             return ApplicationCommandOptionType.channel
         if issubclass(self.type, nextcord.Role):
             return ApplicationCommandOptionType.role
-        if typing.get_origin(self.type) is typing.Union:
+        if typing.get_origin(self.type) is typing.Union:  # type: ignore
             if typing.get_args(self.type) == typing.get_args(Mentionable):
                 return ApplicationCommandOptionType.mentionable
             raise TypeError("Union type not allowed for option type (except Mentionable).")

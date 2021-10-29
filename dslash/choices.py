@@ -2,8 +2,7 @@
 from __future__ import annotations
 
 import functools
-from typing import Any, Generic, Optional, TypeVar, Union, Type
-
+from typing import Any, Generic, Optional, Type, TypeVar, Union
 
 ChoiceType = Union[str, int, float]
 CT = TypeVar("CT")
@@ -54,7 +53,8 @@ class Choices(Generic[CT]):
 
     @classmethod
     def _get_attr_choice(
-            cls, name: str, value: Any) -> Optional[tuple[Choice[ChoiceType], Type[ChoiceType]]]:
+        cls, name: str, value: Any
+    ) -> Optional[tuple[Choice[ChoiceType], Type[ChoiceType]]]:
         """Convert an attribute to a choice."""
         if isinstance(value, str):
             # 'name' is the name of the Python attribute, which should be the
