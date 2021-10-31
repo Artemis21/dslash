@@ -4,7 +4,7 @@ import re
 import traceback
 import typing
 from collections import defaultdict
-from typing import Any, Callable, Coroutine, Literal, Optional, Union, overload
+from typing import Any, Callable, Coroutine, Literal, Optional, Type, Union, overload
 
 import nextcord
 import nextcord.http
@@ -17,6 +17,9 @@ from .commands import (
     SlashCommandInvokeError,
     TopLevelCommand,
 )
+
+if typing.TYPE_CHECKING:
+    from .groups import CommandGroup
 
 logger = logging.getLogger("dslash")
 AsyncFunc = Callable[..., Coroutine]
@@ -301,7 +304,7 @@ class CommandClient(nextcord.Client):
             permissions=permissions,
         )
 
-    def group(self, group: SlashCommandGroup) -> SlashCommandGroup:
+    def group(self, group: Union[SlashCommandGroup, Type["CommandGroup"]]) -> SlashCommandGroup:
         """Register a top-level command group.
 
         Example usage:
@@ -334,7 +337,11 @@ class CommandClient(nextcord.Client):
         client.run(TOKEN)
         ```
         """
-        if group.guild_id == GUILD_ID_DEFAULT:
-            group.guild_id = self.guild_id
-        self._store_command(group)
-        return group
+        # The metaclass of SlashCommandGroup means that the name type checkers
+        # think points to the type itself will in fact point to an instance of
+        # SlashCommandGroup.
+        group_: SlashCommandGroup = group  # type: ignore
+        if group_.guild_id == GUILD_ID_DEFAULT:
+            group_.guild_id = self.guild_id
+        self._store_command(group_)
+        return group_
