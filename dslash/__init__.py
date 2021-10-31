@@ -2,6 +2,7 @@
 from .choices import Choice, Choices
 from .client import CommandClient
 from .commands import SlashCommandInvokeError
+from .groups import CommandGroup, CommandSubGroup, subcommand
 from .options import Channel, Mentionable
 from .permissions import (
     allow_roles,
@@ -12,10 +13,13 @@ from .permissions import (
     guild_permissions,
 )
 
-__version__ = "0.3.3"
+__version__ = "0.4.0"
 __all__ = (
     "__version__",
     "CommandClient",
+    "CommandGroup",
+    "CommandSubGroup",
+    "subcommand",
     "Channel",
     "Mentionable",
     "Choices",

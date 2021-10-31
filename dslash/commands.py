@@ -77,11 +77,14 @@ class BaseSlashCommand:
 class CallableSlashCommand(BaseSlashCommand):
     """Base class for slash commands that do something (not just groups)."""
 
-    def __init__(self, *, callback: CommandCallback, **options: Any):
+    def __init__(self, *, callback: CommandCallback, name: str, description: str):
         """Set up the slash command."""
-        BaseSlashCommand.__init__(self, **options)
+        BaseSlashCommand.__init__(self, name=name, description=description)
         self.callback = callback
         self.options: dict[str, CommandOption] = {}
+        # Params to pass to the callback before the interaction. Useful for
+        # 'self' / 'cls' parameters.
+        self.prepend_params: tuple[Any, ...] = ()
 
     def _process_callback(self):
         """Process the name, docstring and arguments of the callback."""
@@ -134,7 +137,7 @@ class CallableSlashCommand(BaseSlashCommand):
             data = options.get(option.name)
             arguments[option.name] = await option(data, interaction.guild)
         try:
-            await self.callback(interaction, **arguments)
+            await self.callback(*self.prepend_params, interaction, **arguments)
         except Exception as exc:
             raise SlashCommandInvokeError(exc) from exc
 
@@ -180,14 +183,6 @@ class ContainerSlashCommand(BaseSlashCommand):
 class ChildSlashCommand(BaseSlashCommand):
     """Base class for groups/commands which must have parents."""
 
-    def __init__(self, *, name: str, parent: ContainerSlashCommand):
-        """Set up the slash command."""
-        # We don't call the super constructor because this is a base class and
-        # child classes will always have another parent with the same parent as
-        # this class, which will call it instead.
-        self.parent = parent
-        parent.subcommands[name] = self
-
 
 class TopLevelCommand(BaseSlashCommand):
     """Base class for groups/commands at the top level of the hierarchy.
@@ -200,7 +195,6 @@ class TopLevelCommand(BaseSlashCommand):
     def __init__(
         self,
         *,
-        client: "CommandClient",
         guild_id: Optional[int],
         default_permission: bool,
         permissions: Permissions,
@@ -211,11 +205,9 @@ class TopLevelCommand(BaseSlashCommand):
         # this class, which will call it instead.
         self.guild_id = guild_id
         self.default_permission = default_permission
-        self.client = client
-        client._commands[guild_id][self.name] = self
         self.permissions: dict[int, list[ApplicationCommandPermissions]] = {}
         # A PermissionsSetter is primarily meant to be a wrapper, so we apply
-        # it's permissions by calling it on the command/group.
+        # its permissions by calling it on the command/group.
         if permissions:
             if isinstance(permissions, collections.abc.Iterable):
                 for permission in permissions:
@@ -235,31 +227,19 @@ class SlashCommandGroup(TopLevelCommand, ContainerSlashCommand):
     def __init__(
         self,
         *,
-        client: "CommandClient",
         guild_id: Optional[int],
         default_permission: bool,
         permissions: Permissions,
-        **options: Any,
+        name: str,
+        description: str,
     ):
         """Set up a new top-level slash command."""
-        ContainerSlashCommand.__init__(self, **options)
+        ContainerSlashCommand.__init__(self, name=name, description=description)
         TopLevelCommand.__init__(
             self,
-            client=client,
             guild_id=guild_id,
             default_permission=default_permission,
             permissions=permissions,
-        )
-
-    def subgroup(self, name: str, description: str) -> SlashCommandSubGroup:
-        """Create a new subcommand group.
-
-        This is not a decorator.
-        """
-        return SlashCommandSubGroup(
-            parent=self,
-            name=name,
-            description=description,
         )
 
     def _add_dump_data(self, data: dict[str, Any]):
@@ -274,18 +254,18 @@ class SlashCommand(CallableSlashCommand, TopLevelCommand):
     def __init__(
         self,
         *,
-        client: "CommandClient",
         guild_id: Optional[int],
         default_permission: bool,
         permissions: Permissions,
-        **options: Any,
+        callback: CommandCallback,
+        name: str,
+        description: str,
     ):
         """Set up a new top-level slash command."""
-        CallableSlashCommand.__init__(self, **options)
+        CallableSlashCommand.__init__(self, callback=callback, name=name, description=description)
         self._process_callback()
         TopLevelCommand.__init__(
             self,
-            client=client,
             guild_id=guild_id,
             default_permission=default_permission,
             permissions=permissions,
@@ -300,10 +280,9 @@ class SlashCommand(CallableSlashCommand, TopLevelCommand):
 class SlashCommandSubGroup(ChildSlashCommand, ContainerSlashCommand):
     """A sub-group of slash commands."""
 
-    def __init__(self, *, parent: CommandCallback, **options: Any):
+    def __init__(self, name: str, description: str):
         """Set up the slash command group."""
-        ContainerSlashCommand.__init__(self, **options)
-        ChildSlashCommand.__init__(self, name=options["name"], parent=parent)
+        ContainerSlashCommand.__init__(self, name=name, description=description)
 
     def _add_dump_data(self, data: dict[str, Any]):
         """Add the option type to the dump data."""
@@ -315,11 +294,10 @@ class SlashCommandSubGroup(ChildSlashCommand, ContainerSlashCommand):
 class SlashSubCommand(ChildSlashCommand, CallableSlashCommand):
     """A subcommand of a slash command."""
 
-    def __init__(self, *, parent: CommandCallback, **options: Any):
+    def __init__(self, callback: CommandCallback, name: str, description: str):
         """Set up a new subcommand."""
-        CallableSlashCommand.__init__(self, **options)
+        CallableSlashCommand.__init__(self, callback=callback, name=name, description=description)
         self._process_callback()
-        ChildSlashCommand.__init__(self, name=self.name, parent=parent)
 
     def _add_dump_data(self, data: dict[str, Any]):
         """Add the option type to the dump data."""
@@ -341,7 +319,13 @@ class BaseSlashCommandConstructor(typing.Generic[CT]):
 
     def __call__(self, callback: CommandCallback) -> CT:
         """Construct an actual slash command."""
-        return self.command_class(callback=callback, **self.overwrites)
+        command = self.command_class(callback=callback, **self.overwrites)
+        self.register(command)
+        return command
+
+    def register(self, command: CT):
+        """Register the created command."""
+        raise NotImplementedError
 
 
 class SlashCommandConstructor(BaseSlashCommandConstructor[SlashCommand]):
@@ -352,18 +336,24 @@ class SlashCommandConstructor(BaseSlashCommandConstructor[SlashCommand]):
     def __init__(
         self,
         *,
-        client: "CommandClient",
+        client: Optional["CommandClient"],
         guild_id: Optional[int],
         default_permission: bool,
         permissions: Permissions,
-        **options: Any,
+        name: Optional[str],
+        description: Optional[str],
     ):
         """Set up the slash command constructor."""
-        super().__init__(**options)
-        self.overwrites["client"] = client
+        super().__init__(name=name, description=description)
+        self.client = client
         self.overwrites["guild_id"] = guild_id
         self.overwrites["default_permission"] = default_permission
         self.overwrites["permissions"] = permissions
+
+    def register(self, command: SlashCommand):
+        """Register the created command."""
+        if self.client:
+            self.client._store_command(command)
 
 
 class SlashSubCommandConstructor(BaseSlashCommandConstructor[SlashSubCommand]):
@@ -371,7 +361,18 @@ class SlashSubCommandConstructor(BaseSlashCommandConstructor[SlashSubCommand]):
 
     command_class = SlashSubCommand
 
-    def __init__(self, *, parent: ContainerSlashCommand, **options: Any):
+    def __init__(
+        self,
+        *,
+        parent: Optional[ContainerSlashCommand],
+        name: Optional[str],
+        description: Optional[str],
+    ):
         """Set up the slash sub-command constructor."""
-        super().__init__(**options)
-        self.overwrites["parent"] = parent
+        super().__init__(name=name, description=description)
+        self.parent = parent
+
+    def register(self, command: SlashSubCommand):
+        """Register the created subcommand."""
+        if self.parent:
+            self.parent.subcommands[command.name] = command

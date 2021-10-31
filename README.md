@@ -1,6 +1,6 @@
 # DSlash
 
-![Version: 0.3.3](https://img.shields.io/badge/Version-0.3.3-red?style=flat-square)
+![Version: 0.4.0](https://img.shields.io/badge/Version-0.4.0-red?style=flat-square)
 [![Code Style: black](https://img.shields.io/badge/Code%20Style-black-black?style=flat-square)](https://github.com/psf/black)
 [![License: MIT](https://img.shields.io/badge/License-MIT-orange?style=flat-square)](./LICENSE)
 [![PyPI: dslash](https://img.shields.io/badge/PyPI-dslash-green?style=flat-square)](https://pypi.org/project/dslash)
@@ -17,14 +17,12 @@ You can install it using pip, eg. `pip install dslash`.
 ## Example
 
 ```python
-import random
 import logging
-import traceback
+import random
 import typing
 
+from dslash import Choices, CommandClient, CommandGroup, CommandSubGroup, allow_roles, subcommand
 from nextcord import Embed, Interaction, Member, Role
-from dslash import Choices, CommandClient, SlashCommandInvokeError, allow_roles, option
-
 
 GUILD_ID = ...
 ADMIN_ROLE_ID = ...
@@ -36,7 +34,7 @@ client = CommandClient(guild_id=GUILD_ID)
 
 @client.event
 async def on_ready():
-    print(f'Logged in as {client.user}.')
+    print(f"Logged in as {client.user}.")
 
 
 @client.command()
@@ -46,53 +44,51 @@ async def roll(interaction: Interaction, sides: typing.Optional[int]):
     :param sides: How many sides (default 6).
     """
     value = random.randint(1, sides or 6)
-    await interaction.response.send_message(f'You got: {value}')
+    await interaction.response.send_message(f"You got: {value}")
 
 
-images = client.group('images', 'Cute image commands.')
+@client.group
+class Images(CommandGroup):
+    """Cute image commands."""
+
+    @subcommand()
+    async def cat(self, interaction: Interaction):
+        """Get a cat image."""
+        await interaction.response.send_message(
+            embed=Embed().set_image(url="https://cataas.com/cat")
+        )
+
+    @subcommand()
+    async def dog(self, interaction: Interaction):
+        """Get a dog image."""
+        await interaction.response.send_message(
+            embed=Embed().set_image(url="https://placedog.net/500?random")
+        )
+
+    @subcommand(name="any")
+    async def any_(self, interaction: Interaction):
+        """Get any random image."""
+        await interaction.response.send_message(
+            embed=Embed().set_image(url="https://picsum.photos/600")
+        )
 
 
-@images.subcommand()
-async def cat(interaction: Interaction):
-    """Get a cat image."""
-    await interaction.response.send_message(
-        embed=Embed().set_image(url='https://cataas.com/cat')
-    )
+@client.group
+@allow_roles(ADMIN_ROLE_ID)
+class Admin(CommandGroup, default_permissions=False):
+    """Admin-only commands."""
 
+    class Roles(CommandSubGroup):
+        """Commands to manage roles."""
 
-@images.subcommand()
-async def dog(interaction: Interaction):
-    """Get a dog image."""
-    await interaction.response.send_message(
-        embed=Embed().set_image(url='https://placedog.net/500?random')
-    )
+        @subcommand(name="del")
+        async def del_(self, interaction: Interaction, role: Role):
+            """Delete a role.
 
-
-@images.subcommand(name='any')
-async def any_(interaction: Interaction):
-    """Get any random image."""
-    await interaction.response.send_message(
-        embed=Embed().set_image(url='https://picsum.photos/600')
-    )
-
-
-admin = client.group(
-    'admin',
-    'Admin-only commands.',
-    default_permission=False,
-    permissions=allow_roles(ADMIN_ROLE_ID)
-)
-roles = admin.subgroup('roles', 'Commands to manage roles.')
-
-
-@roles.subcommand(name='del')
-async def del_(interaction: Interaction, role: Role):
-    """Delete a role.
-
-    :param role: The role to delete.
-    """
-    await role.delete()
-    await interaction.response.send_message('Deleted the role.', ephemeral=True)
+            :param role: The role to delete.
+            """
+            await role.delete()
+            await interaction.response.send_message("Deleted the role.", ephemeral=True)
 
 
 @allow_roles(ADMIN_ROLE_ID)
@@ -103,14 +99,14 @@ async def ban(interaction: Interaction, user: Member):
     :param user: The user to ban.
     """
     await user.ban()
-    await interaction.response.send_message('Banned the user.', ephemeral=True)
+    await interaction.response.send_message("Banned the user.", ephemeral=True)
 
 
 class RPSChoices(Choices):
-    rock = 'Rock'
-    paper = 'Paper'
-    scissors = 'Scissors'
-    gun = 'Gun'
+    rock = "Rock"
+    paper = "Paper"
+    scissors = "Scissors"
+    gun = "Gun"
 
 
 @client.command()
@@ -122,17 +118,11 @@ async def rps(interaction: Interaction, choice: RPSChoices):
     if choice == RPSChoices.gun:
         await interaction.response.send_message("That's cheating!")
     else:
-        await interaction.response.send_message(f'You picked {choice.name}.')
+        await interaction.response.send_message(f"You picked {choice.name}.")
 
 
 client.run(TOKEN)
 ```
-
-## Planned Features
-
-- Class-based command groups, like `nextcord.ext.commands` cogs.
-
-Compatibility with `nextcord.ext.commands` is not planned.
 
 ## Development
 

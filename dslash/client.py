@@ -4,7 +4,7 @@ import re
 import traceback
 import typing
 from collections import defaultdict
-from typing import Any, Callable, Coroutine, Optional, Union, overload
+from typing import Any, Callable, Coroutine, Literal, Optional, Union, overload
 
 import nextcord
 import nextcord.http
@@ -21,6 +21,9 @@ from .commands import (
 logger = logging.getLogger("dslash")
 AsyncFunc = Callable[..., Coroutine]
 AsyncWrapper = Callable[[AsyncFunc], AsyncFunc]
+
+GUILD_ID_DEFAULT = "default"
+GuildID = Union[None, int, Literal["default"]]
 
 
 class CommandClient(nextcord.Client):
@@ -219,10 +222,14 @@ class CommandClient(nextcord.Client):
             error.args = (error_string, *error.args[1:])
         raise error
 
+    def _store_command(self, command: TopLevelCommand):
+        """Store a command to be registered on login."""
+        self._commands[command.guild_id][command.name] = command
+
     def command(
         self,
         *,
-        guild_id: Optional[int] = None,
+        guild_id: GuildID = GUILD_ID_DEFAULT,
         default_permission: bool = True,
         name: Optional[str] = None,
         description: Optional[str] = None,
@@ -289,75 +296,45 @@ class CommandClient(nextcord.Client):
             client=self,
             name=name,
             description=description,
-            guild_id=guild_id or self.guild_id,
+            guild_id=self.guild_id if guild_id == GUILD_ID_DEFAULT else guild_id,
             default_permission=default_permission,
             permissions=permissions,
         )
 
-    def group(
-        self,
-        name: str,
-        description: str,
-        *,
-        guild_id: Optional[int] = None,
-        default_permission: bool = True,
-        permissions: Permissions = None,
-    ) -> SlashCommandGroup:
-        """Create a new top-level command group.
-
-        - `name` (`str`)
-
-          The name of the command group.
-
-        - `description` (`str`)
-
-          A brief description of the command group.
-
-        - `guild_id` (`Optional[int]`)
-
-          The ID of a guild to limit the command to.
-
-        - `default_permission` (default `True`)
-
-          Whether or not this command should be usable for people where no
-          relevant permissions have been set.
-
-        - `permissions` (`Optional[Union[PermissionsSetter, list[PermissionsSetter]]`)
-
-          Either a single permission or a list of permissions (or `None`, the default).
+    def group(self, group: SlashCommandGroup) -> SlashCommandGroup:
+        """Register a top-level command group.
 
         Example usage:
 
         ```python
         client = CommandClient(guild_id=GUILD_ID)
-        group = client.group(
-            'users',
-            'Commands to manage user profiles.',
-            default_permission=False,
-            permissions=allow_roles(ADMIN_ROLE_ID)
-        )
 
-        @group.subcommand()
-        async def view(
-                interaction: Interaction,
-                user: User = option('The user to view.')):
-            \"""View a user's profile.\"""
-            ...
-
+        @client.group
         @allow_roles(ADMIN_ROLE_ID)
-        @group.subcommand(default_permission=False)
-        async def clear(interaction: Interaction):
-            \"""Clear all user profiles.\"""
-            ...
+        class Profiles(CommandGroup, default_permission=False):
+            \"""Commands to manage user profiles.\"""
+
+            @subcommand()
+            async def create(self, interaction: Interaction, user: User, age: int):
+                \"""Create a new profile for someone.
+
+                :user: The user to create the profile for.
+                :age: The age of the user, in years.
+                \"""
+                ...
+
+            @subcommand()
+            async def delete(self, interaction: Interaction, user: User):
+                \"""Delete someone's profile.
+
+                :user: The person who's profile you want to delete.
+                \"""
+                ...
 
         client.run(TOKEN)
         ```
         """
-        return SlashCommandGroup(
-            client=self,
-            name=name,
-            description=description,
-            guild_id=guild_id or self.guild_id,
-            default_permission=default_permission,
-            permissions=permissions,
-        )
+        if group.guild_id == GUILD_ID_DEFAULT:
+            group.guild_id = self.guild_id
+        self._store_command(group)
+        return group
