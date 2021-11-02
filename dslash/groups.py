@@ -36,16 +36,20 @@ class BaseCommandGroupMeta(type, Generic[GT]):
         parents: tuple[type],
         attrs: dict[str, Any],
         name: Optional[str] = None,
+        _base_class: bool = False,
         **kwargs: Any,
     ) -> GT:
         """Create a new command group class."""
+        new_class = super().__new__(cls, class_name, parents, attrs)
+        if _base_class:
+            return new_class
         group = cls._construct_group(
             name=name or class_name_to_group_name(class_name),
             description=attrs["__doc__"] or "No description.",
             **kwargs,
         )
         # Command groups are singletons.
-        instance = super().__new__(cls, class_name, parents, attrs)()
+        instance = new_class()
         for attr in attrs.values():
             if isinstance(attr, SlashSubCommand):
                 attr.prepend_params = (instance,)
@@ -86,14 +90,14 @@ class CommandSubGroupMeta(BaseCommandGroupMeta[SlashCommandSubGroup]):
         return SlashCommandSubGroup(name=name, description=description)
 
 
-class CommandGroup(metaclass=CommandGroupMeta):
+class CommandGroup(metaclass=CommandGroupMeta, _base_class=True):
     """Class to inherit to build command groups.
 
     See `CommandClient.group` for more information and examples.
     """
 
 
-class CommandSubGroup(metaclass=CommandSubGroupMeta):
+class CommandSubGroup(metaclass=CommandSubGroupMeta, _base_class=True):
     """Class to inherit to build command subgroups."""
 
 
