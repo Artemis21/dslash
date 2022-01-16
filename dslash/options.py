@@ -1,4 +1,5 @@
 """Models to represent arguments to slash commands."""
+import types
 import typing
 from typing import Any, Optional, Type, Union
 
@@ -37,7 +38,7 @@ class CommandOption:
 
     def _get_optional_type(self, param_type: Type) -> Optional[Type]:
         """Return the root type if 'type' is optional."""
-        if typing.get_origin(param_type) is typing.Union:  # type: ignore
+        if typing.get_origin(param_type) in (typing.Union, types.UnionType):
             args = typing.get_args(param_type)
             if len(args) == 2 and isinstance(None, args[1]):
                 return args[0]

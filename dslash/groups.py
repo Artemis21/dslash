@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import re
-from typing import Any, Generic, Optional, TypeVar
+from typing import Any, Generic, Optional, TypeVar, Union
 
 from .client import GUILD_ID_DEFAULT, GuildID
 from .commands import (
@@ -38,7 +38,7 @@ class BaseCommandGroupMeta(type, Generic[GT]):
         name: Optional[str] = None,
         _base_class: bool = False,
         **kwargs: Any,
-    ) -> GT:
+    ) -> Union[GT, type]:
         """Create a new command group class."""
         new_class = super().__new__(cls, class_name, parents, attrs)
         if _base_class:
