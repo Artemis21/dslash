@@ -136,7 +136,10 @@ class CallableSlashCommand(BaseSlashCommand):
         for option in self.options.values():
             data = options.get(option.name)
             arguments[option.name] = await option(data, interaction.guild)
+        client: "CommandClient" = interaction._state._get_client()  # type: ignore
         try:
+            if client.custom_interaction:
+                interaction = client.custom_interaction(interaction)
             await self.callback(*self.prepend_params, interaction, **arguments)
         except Exception as exc:
             raise SlashCommandInvokeError(exc) from exc

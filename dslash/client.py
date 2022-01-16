@@ -39,7 +39,13 @@ class CommandClient(nextcord.Client):
     application_id: int
     _commands: dict[Optional[int], dict[str, TopLevelCommand]]
 
-    def __init__(self, guild_id: Optional[int] = None, **options: typing.Any):
+    def __init__(
+        self,
+        guild_id: Optional[int] = None,
+        *,
+        custom_interaction: Optional[Callable[[nextcord.Interaction], typing.Any]] = None,
+        **options: typing.Any,
+    ):
         """Set up the client.
 
         - `guild_id` (`Optional[int]`)
@@ -49,9 +55,15 @@ class CommandClient(nextcord.Client):
           for that command specifically. This is useful during testing, because
           guild-specific commands update immediately, whereas global commands
           can be cached for up to an hour.
+
+        - `custom_interaction` (`Optional[Callable[[nextcord.Interaction], Any]]`)
+
+          A callable which transforms an interaction into a custom interaction
+          type to be passed as the first argument to commands.
         """
         super().__init__(**options)
         self.guild_id = guild_id
+        self.custom_interaction = custom_interaction
         self._commands = defaultdict(dict)
         self._commands_by_id: dict[int, TopLevelCommand] = {}
         self._http: nextcord.http.HTTPClient = self._connection.http
