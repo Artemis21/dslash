@@ -130,6 +130,8 @@ class CommandOption:
             ApplicationCommandOptionType.integer,
             ApplicationCommandOptionType.number,
         ):
+            if self.choices:
+                return self.choices._find_choice(value)
             return value
         value = int(value)
         if not guild:
