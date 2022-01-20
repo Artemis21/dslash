@@ -1,7 +1,6 @@
 """Interface for specifying option choices."""
 from __future__ import annotations
 
-import functools
 from typing import Any, Generic, Optional, Type, TypeVar, Union
 
 ChoiceType = Union[str, int, float]
@@ -10,9 +9,6 @@ CT = TypeVar("CT")
 
 class Choice(Generic[CT]):
     """A single choice as part of an option's choices."""
-
-    name: str
-    value: CT
 
     def __init__(self, name: str, value: CT):
         """Store the choice attributes."""
@@ -24,7 +20,84 @@ class Choice(Generic[CT]):
         return f"Choice(name={self.name!r}, value={self.value!r})"
 
 
-class Choices(Generic[CT]):
+class ChoicesMeta(type, Generic[CT]):
+    """A metaclass for choices."""
+
+    @classmethod
+    def attribute_to_choice(
+        cls, name: str, value: Any
+    ) -> Optional[tuple[Choice[ChoiceType], Type[ChoiceType]]]:
+        """Convert an attribute to a choice."""
+        if isinstance(value, str):
+            # 'name' is the name of the Python attribute, which should be the
+            # internally-used *value* for the choice, and 'value' is the value
+            # of the Python attribute, which should be the user-displayed
+            # *name* of the choice.
+            return Choice(name=value, value=name), str
+        elif isinstance(value, Choice):
+            return value, type(value.value)
+        return None
+
+    @classmethod
+    def attributes_to_choices(
+        cls,
+        attrs: dict[str, Any],
+    ) -> tuple[dict[str, Choice[CT]], Type[CT]]:
+        """Get a mapping of attr name to chocie and the choice type for a choices class."""
+        choices = {}
+        choice_type = None
+        for name, value in attrs.items():
+            if name.startswith("_"):
+                continue
+            if not (choice_and_type := cls.attribute_to_choice(name, value)):
+                continue
+            choice, this_type = choice_and_type
+            if choice_type is None:
+                choice_type = this_type
+            elif choice_type != this_type:
+                raise TypeError(
+                    f"All choices must be of the same type, but {name} is "
+                    f"{this_type} and previous choices were {choice_type}."
+                )
+            choices[name] = choice
+        if choice_type is None:
+            raise ValueError("There must be at least one choice.")
+        return choices, choice_type  # type: ignore
+
+    def __new__(
+        cls,
+        class_name: str,
+        parents: tuple[type],
+        attrs: dict[str, Any],
+        abstract: bool = False,
+    ) -> type:
+        """Create a new command group class."""
+        if abstract:
+            return super().__new__(cls, class_name, parents, attrs)
+        attrs_to_choices, choice_type = cls.attributes_to_choices(attrs)
+        for attr in attrs_to_choices:
+            del attrs[attr]
+        value_map = {}
+        name_map = {}
+        attrs["_value_map"] = value_map
+        attrs["_name_map"] = name_map
+        attrs["_choice_data"] = [
+            {"name": choice.name, "value": choice.value} for choice in attrs_to_choices.values()
+        ]
+        attrs["_choice_type"] = choice_type
+        new_cls = super().__new__(cls, class_name, parents, attrs)
+        for name, choice_data in attrs_to_choices.items():
+            choice = new_cls(choice_data.name, choice_data.value)
+            value_map[choice_data.value] = choice
+            name_map[name] = choice
+        return new_cls
+
+    def __getattr__(cls: Type[Choices[CT]], name: str) -> Choices[CT]:
+        """Get a choice by name."""
+        return cls._name_map[name]  # type: ignore
+
+
+class Choices(Generic[CT], metaclass=ChoicesMeta, abstract=True):
     """A class containing each of the choices for some option.
 
     Example usage:
@@ -48,57 +121,28 @@ class Choices(Generic[CT]):
     ```
     """
 
+    # Discord choice value -> choice instance (class attribute)
+    _value_map: dict[CT, Choice[CT]]
+
+    # Python choice name -> choice instance (class attribute)
+    _name_map: dict[str, Choice[CT]]
+
+    # Discord JSON choice data (class attribute)
+    _choice_data: dict[str, dict[str, Union[str, CT]]]
+
+    # Choice type (class attribute)
+    _choice_type: Type[CT]
+
+    # Discord choice name (instance attribute)
     name: str
+
+    # Discord choice value (instance attribute)
     value: CT
 
     @classmethod
-    def _get_attr_choice(
-        cls, name: str, value: Any
-    ) -> Optional[tuple[Choice[ChoiceType], Type[ChoiceType]]]:
-        """Convert an attribute to a choice."""
-        if isinstance(value, str):
-            # 'name' is the name of the Python attribute, which should be the
-            # internally-used *value* for the choice, and 'value' is the value
-            # of the Python attribute, which should be the user-displayed
-            # *name* of the choice.
-            return Choice(name=value, value=name), str
-        elif isinstance(value, Choice):
-            return value, type(value.value)
-        return None
-
-    @classmethod
-    @functools.cache
-    def _get_choices(cls) -> tuple[list[Choice[CT]], Type[CT]]:
-        """Get the JSON data for registering these choices with the API."""
-        choices = []
-        choice_type = None
-        for name, value in cls.__dict__.items():
-            if name.startswith("_"):
-                continue
-            if not (choice_and_type := cls._get_attr_choice(name, value)):
-                continue
-            choice, this_type = choice_and_type
-            if choice_type is None:
-                choice_type = this_type
-            elif choice_type != this_type:
-                raise TypeError(
-                    f"All choices must be of the same type, but {name} is "
-                    f"{this_type} and previous choices were {choice_type}."
-                )
-            choices.append(choice)
-        if choice_type is None:
-            raise ValueError("There must be at least one choice.")
-        return choices, choice_type  # type: ignore
-
-    @classmethod
-    @functools.cache
-    def _find_choice(cls, value: CT) -> Choices[CT]:
-        """Find the choice with the given value."""
-        choices, _choice_type = cls._get_choices()
-        for choice in choices:
-            if choice.value == value:
-                return cls(choice.name, choice.value)
-        raise ValueError(f"Recieved {cls.__name__!r} choice with invalid value {value!r}.")
+    def _get_by_value(cls, value: CT) -> Choice[CT]:
+        """Get a choice by value."""
+        return cls._value_map[value]
 
     def __init__(self, name: str, value: CT):
         """Store the attributes of a single choice."""

@@ -52,9 +52,8 @@ class CommandOption:
         else:
             required = True
         if issubclass(type, Choices):
-            _choices, choice_type = type._get_choices()
             choices = type
-            type = choice_type
+            type = choices._choice_type
         else:
             choices = None
         return type, choices, required
@@ -62,8 +61,7 @@ class CommandOption:
     def dump(self) -> dict[str, Any]:
         """Get the JSON data for registering this option with the API."""
         if self.choices:
-            choice_data, _choice_type = self.choices._get_choices()
-            choice_dump = [{"name": choice.name, "value": choice.value} for choice in choice_data]
+            choice_dump = self.choices._choice_data
         else:
             choice_dump = None
         return {
@@ -131,7 +129,7 @@ class CommandOption:
             ApplicationCommandOptionType.number,
         ):
             if self.choices:
-                return self.choices._find_choice(value)
+                return self.choices._get_by_value(value)
             return value
         value = int(value)
         if not guild:
