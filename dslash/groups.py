@@ -12,6 +12,7 @@ from .commands import (
     SlashSubCommand,
     SlashSubCommandConstructor,
 )
+from .permissions import warn_permissions_deprecation
 
 
 def class_name_to_group_name(class_name: str) -> str:
@@ -68,16 +69,17 @@ class CommandGroupMeta(BaseCommandGroupMeta[SlashCommandGroup]):
         name: str,
         description: str,
         guild_id: GuildID = GUILD_ID_DEFAULT,
-        default_permission: bool = True,
+        # This option only exists for legacy reasons, and has no effect.
+        default_permission: bool | None = None,
     ) -> SlashCommandGroup:
         """Construct a the actual group object."""
+        if default_permission is not None:
+            warn_permissions_deprecation()
         return SlashCommandGroup(
             # The client will replace the guild ID default when the group is registered.
             guild_id=guild_id,  # type: ignore
             name=name,
             description=description,
-            default_permission=default_permission,
-            permissions=None,
         )
 
 

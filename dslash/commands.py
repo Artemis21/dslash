@@ -1,7 +1,6 @@
 """Models to represent slash commands and sub-commands."""
 from __future__ import annotations
 
-import collections.abc
 import inspect
 import typing
 from typing import Any, Optional, Type, Union
@@ -9,13 +8,12 @@ from typing import Any, Optional, Type, Union
 import docstring_parser
 import nextcord
 from docstring_parser.common import DocstringParam
-from nextcord.types.interactions import ApplicationCommandPermissions
 
 from .options import ApplicationCommandOptionType, CommandOption
+from .permissions import PermissionsSetter, warn_permissions_deprecation
 
 if typing.TYPE_CHECKING:
     from .client import CommandClient
-    from .permissions import PermissionsSetter
 
 
 CommandCallback = Any
@@ -199,29 +197,18 @@ class TopLevelCommand(BaseSlashCommand):
         self,
         *,
         guild_id: Optional[int],
-        default_permission: bool,
-        permissions: Permissions,
+        # Permissions options remain only for legacy reasons, and have no effect.
+        default_permission: bool | None = None,
+        permissions: Permissions | None = None,
     ):
         """Set up a new top-level slash command."""
+        if (default_permission is not None) or (permissions is not None):
+            warn_permissions_deprecation()
         # We don't call the super constructor because this is a base class and
         # child classes will always have another parent with the same parent as
         # this class, which will call it instead.
         self.guild_id = guild_id
-        self.default_permission = default_permission
-        self.permissions: dict[int, list[ApplicationCommandPermissions]] = {}
-        # A PermissionsSetter is primarily meant to be a wrapper, so we apply
-        # its permissions by calling it on the command/group.
-        if permissions:
-            if isinstance(permissions, collections.abc.Iterable):
-                for permission in permissions:
-                    permission(self)
-            else:
-                permissions(self)
         self.id: Optional[int] = None
-
-    def _add_dump_data(self, data: dict[str, Any]):
-        """Add the default permissions to the dump data."""
-        data["default_permission"] = self.default_permission
 
 
 class SlashCommandGroup(TopLevelCommand, ContainerSlashCommand):
@@ -231,23 +218,20 @@ class SlashCommandGroup(TopLevelCommand, ContainerSlashCommand):
         self,
         *,
         guild_id: Optional[int],
-        default_permission: bool,
-        permissions: Permissions,
         name: str,
         description: str,
+        # Permissions options remain only for legacy reasons, and have no effect.
+        default_permission: bool | None = None,
+        permissions: Permissions | None = None,
     ):
         """Set up a new top-level slash command."""
+        if (default_permission is not None) or (permissions is not None):
+            warn_permissions_deprecation()
         ContainerSlashCommand.__init__(self, name=name, description=description)
-        TopLevelCommand.__init__(
-            self,
-            guild_id=guild_id,
-            default_permission=default_permission,
-            permissions=permissions,
-        )
+        TopLevelCommand.__init__(self, guild_id=guild_id)
 
     def _add_dump_data(self, data: dict[str, Any]):
-        """Add the default permissions to the dump data."""
-        TopLevelCommand._add_dump_data(self, data)
+        """Add the subcommands to the dump data."""
         ContainerSlashCommand._add_dump_data(self, data)
 
 
@@ -258,26 +242,23 @@ class SlashCommand(CallableSlashCommand, TopLevelCommand):
         self,
         *,
         guild_id: Optional[int],
-        default_permission: bool,
-        permissions: Permissions,
         callback: CommandCallback,
         name: str,
         description: str,
+        # Permissions options remain only for legacy reasons, and have no effect.
+        default_permission: bool | None = None,
+        permissions: Permissions | None = None,
     ):
         """Set up a new top-level slash command."""
+        if (default_permission is not None) or (permissions is not None):
+            warn_permissions_deprecation()
         CallableSlashCommand.__init__(self, callback=callback, name=name, description=description)
         self._process_callback()
-        TopLevelCommand.__init__(
-            self,
-            guild_id=guild_id,
-            default_permission=default_permission,
-            permissions=permissions,
-        )
+        TopLevelCommand.__init__(self, guild_id=guild_id)
 
     def _add_dump_data(self, data: dict[str, Any]):
-        """Add the default permissions to the dump data."""
+        """Add the command options to the dump data."""
         CallableSlashCommand._add_dump_data(self, data)
-        TopLevelCommand._add_dump_data(self, data)
 
 
 class SlashCommandSubGroup(ChildSlashCommand, ContainerSlashCommand):
@@ -341,17 +322,18 @@ class SlashCommandConstructor(BaseSlashCommandConstructor[SlashCommand]):
         *,
         client: Optional["CommandClient"],
         guild_id: Optional[int],
-        default_permission: bool,
-        permissions: Permissions,
         name: Optional[str],
         description: Optional[str],
+        # Permissions options remain only for legacy reasons, and have no effect.
+        default_permission: bool | None = None,
+        permissions: Permissions | None = None,
     ):
         """Set up the slash command constructor."""
+        if (default_permission is not None) or (permissions is not None):
+            warn_permissions_deprecation()
         super().__init__(name=name, description=description)
         self.client = client
         self.overwrites["guild_id"] = guild_id
-        self.overwrites["default_permission"] = default_permission
-        self.overwrites["permissions"] = permissions
 
     def register(self, command: SlashCommand):
         """Register the created command."""

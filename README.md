@@ -1,10 +1,28 @@
 # DSlash
 
-![Version: 0.6.0](https://img.shields.io/badge/Version-0.6.0-red?style=flat-square)
+![Version: 0.6.1](https://img.shields.io/badge/Version-0.6.1-red?style=flat-square)
 [![Code Style: black](https://img.shields.io/badge/Code%20Style-black-black?style=flat-square)](https://github.com/psf/black)
 [![License: MIT](https://img.shields.io/badge/License-MIT-orange?style=flat-square)](./LICENSE)
 [![PyPI: dslash](https://img.shields.io/badge/PyPI-dslash-green?style=flat-square)](https://pypi.org/project/dslash)
 ![Python: ^3.9](https://img.shields.io/badge/python-%5E3.9-blue?style=flat-square)
+
+> **THIS PROJECT IS NO LONGER MAINTAINED**
+>
+> Danny has returned from a break, and [Discord.py](https://github.com/rapptz/discord.py)
+> is now being maintained again, with support for slash commands. Nextcord also
+> now has built-in support for slash commands. For new projects, you should use
+> one of these options (or another).
+>
+> Dslash will continue to receive minimal updates to keep it working, at least
+> for the near future, but it will not receive support for new features.
+>
+> One change Discord has made since this library stopped being maintained was
+> to remove support for bots configuring permissions for their own commands. In
+> order to avoid breaking bots, Dslash still allows permissions to be
+> configured as before, but will now ignore them. The `allow_roles`,
+> `allow_users`, `disallow_roles`, `disallow_users`, `global_permissions` and
+> `guild_permissions` wrappers, as well as the `default_permission` and
+> `permissions` parameters are all deprecated and should not be used.
 
 A library which supplements [Nextcord](https://github.com/nextcord/nextcord)
 (a fork of Discord.py) by adding support for slash commands.
@@ -21,11 +39,10 @@ import logging
 import random
 import typing
 
-from dslash import Choices, CommandClient, CommandGroup, CommandSubGroup, allow_roles, subcommand
+from dslash import Choices, CommandClient, CommandGroup, CommandSubGroup, subcommand
 from nextcord import Embed, Interaction, Member, Role
 
 GUILD_ID = ...
-ADMIN_ROLE_ID = ...
 TOKEN = ...
 
 logging.basicConfig(level=logging.INFO)
@@ -74,8 +91,7 @@ class Images(CommandGroup):
 
 
 @client.group
-@allow_roles(ADMIN_ROLE_ID)
-class Admin(CommandGroup, default_permissions=False):
+class Admin(CommandGroup):
     """Admin-only commands."""
 
     class Roles(CommandSubGroup):
@@ -91,8 +107,7 @@ class Admin(CommandGroup, default_permissions=False):
             await interaction.response.send_message("Deleted the role.", ephemeral=True)
 
 
-@allow_roles(ADMIN_ROLE_ID)
-@client.command(default_permission=False)
+@client.command()
 async def ban(interaction: Interaction, user: Member):
     """Ban a user.
 

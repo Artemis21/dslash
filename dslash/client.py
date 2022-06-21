@@ -17,6 +17,7 @@ from .commands import (
     SlashCommandInvokeError,
     TopLevelCommand,
 )
+from .permissions import warn_permissions_deprecation
 
 if typing.TYPE_CHECKING:
     from .groups import CommandGroup
@@ -181,7 +182,7 @@ class CommandClient(nextcord.Client):
     async def _update_scope_commands(
         self, scope: typing.Optional[int], commands: dict[str, TopLevelCommand]
     ):
-        """Update all commands for a scope and track permissions."""
+        """Update all commands for a scope."""
         command_data = [command.dump() for command in commands.values()]
         try:
             created_commands = await self._register_scope_commands(
@@ -189,20 +190,11 @@ class CommandClient(nextcord.Client):
             )
         except nextcord.HTTPException as error:
             self._handle_register_error(error, command_data)  # type: ignore
-        permission_data = defaultdict(list)
         for command_data in created_commands:
             command = commands[command_data["name"]]
             command_id = int(command_data["id"])
             self._commands_by_id[command_id] = command
             command.id = command_id
-            for guild_id, permissions in command.permissions.items():
-                permission_data[guild_id].append({"id": command.id, "permissions": permissions})
-        for guild_id, permissions in permission_data.items():
-            if not permissions:
-                continue
-            await self._http.bulk_edit_guild_application_command_permissions(
-                self.application_id, guild_id, permissions
-            )
 
     async def _register_scope_commands(
         self, scope: typing.Optional[int], commands: list[EditApplicationCommand]
@@ -245,7 +237,7 @@ class CommandClient(nextcord.Client):
         self,
         *,
         guild_id: GuildID = GUILD_ID_DEFAULT,
-        default_permission: bool = True,
+        default_permission: bool | None = None,
         name: Optional[str] = None,
         description: Optional[str] = None,
         permissions: Permissions = None,
@@ -256,7 +248,9 @@ class CommandClient(nextcord.Client):
 
           The ID of a guild to limit the command to.
 
-        - `default_permission` (default `True`)
+        - `default_permission` (default `None`)
+
+          THIS OPTION IS DEPRECATED AND HAS NO EFFECT. It remains for legacy reasons.
 
           Whether or not this command should be usable for people where no
           relevant permissions have been set.
@@ -273,6 +267,8 @@ class CommandClient(nextcord.Client):
 
         - `permissions`
           (`Optional[Union[PermissionsSetter, list[PermissionsSetter]]`)
+
+          THIS OPTION IS DEPRECATED AND HAS NO EFFECT. It remains for legacy reasons.
 
           Either a single permission or a list of permissions (or `None`, the
           default). These can also be applied as decorators.
@@ -294,11 +290,11 @@ class CommandClient(nextcord.Client):
         Example of setting more parameters:
 
         ```python
-        @client.command(name='del', default_permission=False)
-        @allow_roles(ADMIN_ROLE_ID, guild_id=GUILD_ID)
+        @client.command(name='del')
         async def del_(
-                interaction: Interaction,
-                channel: Channel = option('The channel to delete.')):
+            interaction: Interaction,
+            channel: Channel = option('The channel to delete.')
+        ):
             \"""Delete a channel.\"""
             await channel.delete()
             await interaction.response.send_message(
@@ -307,13 +303,13 @@ class CommandClient(nextcord.Client):
             )
         ```
         """
+        if (permissions is not None) or (default_permission is not None):
+            warn_permissions_deprecation()
         return SlashCommandConstructor(
             client=self,
             name=name,
             description=description,
             guild_id=self.guild_id if guild_id == GUILD_ID_DEFAULT else guild_id,
-            default_permission=default_permission,
-            permissions=permissions,
         )
 
     def group(self, group: Union[SlashCommandGroup, Type["CommandGroup"]]) -> SlashCommandGroup:
@@ -325,8 +321,7 @@ class CommandClient(nextcord.Client):
         client = CommandClient(guild_id=GUILD_ID)
 
         @client.group
-        @allow_roles(ADMIN_ROLE_ID)
-        class Profiles(CommandGroup, default_permission=False):
+        class Profiles(CommandGroup):
             \"""Commands to manage user profiles.\"""
 
             @subcommand()
