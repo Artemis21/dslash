@@ -133,7 +133,7 @@ class CallableSlashCommand(BaseSlashCommand):
         arguments = {}
         for option in self.options.values():
             data = options.get(option.name)
-            arguments[option.name] = await option(data, interaction.guild)
+            arguments[option.name] = await option(data, interaction)
         client: "CommandClient" = interaction._state._get_client()  # type: ignore
         try:
             if client.custom_interaction:

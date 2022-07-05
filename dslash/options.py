@@ -25,6 +25,7 @@ class ApplicationCommandOptionType(Enum):
     role = 8
     mentionable = 9
     number = 10
+    attachment = 11
 
 
 class CommandOption:
@@ -108,6 +109,8 @@ class CommandOption:
             return ApplicationCommandOptionType.channel
         if issubclass(self.type, nextcord.Role):
             return ApplicationCommandOptionType.role
+        if issubclass(self.type, nextcord.Attachment):
+            return ApplicationCommandOptionType.attachment
         if typing.get_origin(self.type) is typing.Union:  # type: ignore
             if typing.get_args(self.type) == typing.get_args(Mentionable):
                 return ApplicationCommandOptionType.mentionable
@@ -115,7 +118,7 @@ class CommandOption:
         raise TypeError(f"Unsupported option type {self.type!r}.")
 
     async def __call__(
-        self, data: Optional[dict[str, Any]], guild: Optional[nextcord.Guild]
+        self, data: Optional[dict[str, Any]], interaction: nextcord.Interaction
     ) -> Any:
         """Process option data from the API."""
         if (not data) or "value" not in data:
@@ -131,8 +134,18 @@ class CommandOption:
             if self.choices:
                 return self.choices._get_by_value(value)
             return value
+        if type == ApplicationCommandOptionType.attachment:
+            data = (
+                interaction.data.get("resolved", {}).get("attachments", {}).get(value)
+                if interaction.data else None
+            )
+            if data:
+                return nextcord.Attachment(data=data, state=interaction._state)
+            raise ValueError("Attachment option recieved without resolved attachment.")
+        # We could use `resolved` for users/roles/channels, but working with
+        # discord.py/nextcord internals is more hassle than it's worth.
         value = int(value)
-        if not guild:
+        if not (guild := interaction.guild):
             raise ValueError("User/role/channel option recieved without a guild.")
         if type == ApplicationCommandOptionType.mentionable:
             if role := guild.get_role(value):

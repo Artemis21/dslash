@@ -1,6 +1,6 @@
 # DSlash
 
-![Version: 0.6.1](https://img.shields.io/badge/Version-0.6.1-red?style=flat-square)
+![Version: 0.6.2](https://img.shields.io/badge/Version-0.6.2-red?style=flat-square)
 [![Code Style: black](https://img.shields.io/badge/Code%20Style-black-black?style=flat-square)](https://github.com/psf/black)
 [![License: MIT](https://img.shields.io/badge/License-MIT-orange?style=flat-square)](./LICENSE)
 [![PyPI: dslash](https://img.shields.io/badge/PyPI-dslash-green?style=flat-square)](https://pypi.org/project/dslash)
@@ -40,7 +40,7 @@ import random
 import typing
 
 from dslash import Choices, CommandClient, CommandGroup, CommandSubGroup, subcommand
-from nextcord import Embed, Interaction, Member, Role
+from nextcord import Embed, Interaction, Member, Role, Attachment
 
 GUILD_ID = ...
 TOKEN = ...
@@ -88,6 +88,12 @@ class Images(CommandGroup):
         await interaction.response.send_message(
             embed=Embed().set_image(url="https://picsum.photos/600")
         )
+
+    @subcommand()
+    async def upload(self, interaction: Interaction, image: Attachment):
+        """Upload a new cute image."""
+        print(f"Uploading {image.proxy_url!r}...")
+        await interaction.response.send_message("All done!")
 
 
 @client.group
