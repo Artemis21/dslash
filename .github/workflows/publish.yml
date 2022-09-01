@@ -17,6 +17,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install poetry
+        poetry cache clear
         poetry install
     - name: Build and publish
       env:
