@@ -57,7 +57,7 @@ _format = "black . -q"
 _format_imports = "isort . -q"
 lint = "flake8 ."
 format = ["_format_imports", "_format", "lint"]
-build = ["_build"]
+_build = "python -m build"
 _publish = "twine upload dist/*"
 publish = ["_build", "_publish"]
 
