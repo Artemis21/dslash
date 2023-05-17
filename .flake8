@@ -1,4 +1,4 @@
 [flake8]
-ignore = ANN101, ANN102, W503, D3
+ignore = ANN101, ANN102, W503, D3, ANN401
 suppress-none-returning = true
 max-line-length = 100

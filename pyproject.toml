@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "dslash"
-version = "0.6.3"
+version = "0.6.4"
 description = "A library which supplements Nextcord by adding support for slash commands."
 authors = ["Artemis <me@arty.li>"]
 license = "MIT"
@@ -24,7 +24,7 @@ nextcord = "^2.0.0-alpha.3"
 docstring-parser = "^0.12"
 
 [tool.poetry.dev-dependencies]
-black = "^21.7b0"
+black = "^23.3.0"
 isort = "^5.9.3"
 flake8 = "^3.9.2"
 flake8-annotations = "^2.6.2"

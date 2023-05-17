@@ -94,6 +94,8 @@ class ChoicesMeta(type, Generic[CT]):
 
     def __getattr__(cls: Type[Choices[CT]], name: str) -> Choices[CT]:
         """Get a choice by name."""
+        if name.startswith("__"):
+            return super().__getattr__(name)
         return cls._name_map[name]  # type: ignore
 
 

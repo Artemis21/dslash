@@ -137,7 +137,8 @@ class CommandOption:
         if type == ApplicationCommandOptionType.attachment:
             data = (
                 interaction.data.get("resolved", {}).get("attachments", {}).get(value)
-                if interaction.data else None
+                if interaction.data
+                else None
             )
             if data:
                 return nextcord.Attachment(data=data, state=interaction._state)
