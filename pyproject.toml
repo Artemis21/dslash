@@ -37,7 +37,7 @@ flake8-raise = "^0.0.5"
 flake8-string-format = "^0.3.0"
 flake8-todo = "^0.7"
 build = "^0.8.0"
-twine = "^4.0.1"
+twine = "^6.1.0"
 poethepoet = "^0.16.1"
 
 [tool.isort]
