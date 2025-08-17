@@ -16,6 +16,7 @@ def warn_permissions_deprecation():
         "dslash: permissions configuration is deprecated and has no effect, as "
         "Discord no longer allows bots to configure permissions.",
         DeprecationWarning,
+        stacklevel=3,
     )
 
 

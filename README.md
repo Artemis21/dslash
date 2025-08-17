@@ -1,10 +1,10 @@
 # DSlash
 
-![Version: 0.6.4](https://img.shields.io/badge/Version-0.6.4-red?style=flat-square)
+![Version: 0.7.0](https://img.shields.io/badge/Version-0.7.0-red?style=flat-square)
 [![Code Style: black](https://img.shields.io/badge/Code%20Style-black-black?style=flat-square)](https://github.com/psf/black)
 [![License: MIT](https://img.shields.io/badge/License-MIT-orange?style=flat-square)](./LICENSE)
 [![PyPI: dslash](https://img.shields.io/badge/PyPI-dslash-green?style=flat-square)](https://pypi.org/project/dslash)
-![Python: ^3.9](https://img.shields.io/badge/python-%5E3.9-blue?style=flat-square)
+![Python: ^3.12](https://img.shields.io/badge/python-%5E3.12-blue?style=flat-square)
 
 > **THIS PROJECT IS NO LONGER MAINTAINED**
 >
@@ -147,7 +147,7 @@ client.run(TOKEN)
 
 ## Development
 
-As well as Python 3.9+, this project requires Poetry for development.
+As well as Python 3.12+, this project requires Poetry for development.
 [Click this link for installation instructions](https://python-poetry.org/docs/master/#installation),
 or:
 
