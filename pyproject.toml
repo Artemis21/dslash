@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "dslash"
-version = "0.7.0"
+version = "0.7.1"
 description = "A library which supplements Nextcord by adding support for slash commands."
 authors = ["Artemis <me@arty.li>"]
 license = "MIT"

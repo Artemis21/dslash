@@ -170,7 +170,7 @@ class CommandClient(nextcord.Client):
         If you run the client with `client.start`, you do not need to call this
         yourself, it will be called automatically.
         """
-        data = await self.http.static_login(token.strip())
+        data = await self.http.static_login(f"Bot {token.strip()}")
         if not self._connection.application_id:
             self._connection.application_id = int(data["id"])
         logger.info("Syncing commands...")
